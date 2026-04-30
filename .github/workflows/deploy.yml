@@ -1,0 +1,46 @@
+name: 🚀 Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy public/ to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: "🌐 Deploy → https://akshatj0707.github.io/facial-attendance-deploy/"
+
+      - name: Print live URL
+        run: |
+          echo ""
+          echo "╔════════════════════════════════════════════════════════════╗"
+          echo "║           🎓 FACIAL ATTENDANCE SYSTEM — LIVE!             ║"
+          echo "╠════════════════════════════════════════════════════════════╣"
+          echo "║  🌐  https://akshatj0707.github.io/facial-attendance-deploy/"
+          echo "╚════════════════════════════════════════════════════════════╝"
+          {
+            echo "## 🎓 Facial Attendance System — Live on GitHub Pages!"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| 🌐 **URL** | [https://akshatj0707.github.io/facial-attendance-deploy/](https://akshatj0707.github.io/facial-attendance-deploy/) |"
+            echo "| 📊 **Dashboard** | [/dashboard.html](https://akshatj0707.github.io/facial-attendance-deploy/dashboard.html) |"
+            echo "| 📋 **Attendance** | [/attendance.html](https://akshatj0707.github.io/facial-attendance-deploy/attendance.html) |"
+            echo "| 👤 **Students** | [/students.html](https://akshatj0707.github.io/facial-attendance-deploy/students.html) |"
+            echo "| 🎥 **Recognition** | [/recognition.html](https://akshatj0707.github.io/facial-attendance-deploy/recognition.html) |"
+          } >> $GITHUB_STEP_SUMMARY
