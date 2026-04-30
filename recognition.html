@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Recognition Interface - College Attendance System</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed": "#d5e3fd",
+                    "secondary": "#515f74",
+                    "on-secondary-fixed": "#0d1c2f",
+                    "on-tertiary-fixed": "#001d31",
+                    "inverse-on-surface": "#eff1f3",
+                    "surface-container-high": "#e6e8ea",
+                    "on-background": "#191c1e",
+                    "outline": "#76777d",
+                    "surface-dim": "#d8dadc",
+                    "secondary-container": "#d5e3fd",
+                    "on-secondary-container": "#57657b",
+                    "surface-variant": "#e0e3e5",
+                    "tertiary-fixed": "#cce5ff",
+                    "tertiary-fixed-dim": "#93ccff",
+                    "primary-fixed-dim": "#bec6e0",
+                    "outline-variant": "#c6c6cd",
+                    "inverse-surface": "#2d3133",
+                    "primary-fixed": "#dae2fd",
+                    "inverse-primary": "#bec6e0",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "on-secondary": "#ffffff",
+                    "tertiary": "#000000",
+                    "on-secondary-fixed-variant": "#3a485c",
+                    "on-surface": "#191c1e",
+                    "error": "#ba1a1a",
+                    "surface-container": "#eceef0",
+                    "on-error": "#ffffff",
+                    "primary-container": "#131b2e",
+                    "tertiary-container": "#001d31",
+                    "on-tertiary-container": "#188ace",
+                    "error-container": "#ffdad6",
+                    "surface": "#f7f9fb",
+                    "surface-container-highest": "#e0e3e5",
+                    "surface-container-low": "#f2f4f6",
+                    "on-tertiary-fixed-variant": "#004b73",
+                    "surface-tint": "#565e74",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed": "#131b2e",
+                    "background": "#f7f9fb",
+                    "on-primary-container": "#7c839b",
+                    "secondary-fixed-dim": "#b9c7e0",
+                    "surface-bright": "#f7f9fb",
+                    "on-surface-variant": "#45464d",
+                    "primary": "#000000"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "margin": "32px",
+                    "xl": "64px",
+                    "sm": "12px",
+                    "xs": "4px",
+                    "lg": "40px",
+                    "gutter": "16px",
+                    "md": "24px",
+                    "base": "8px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Public Sans"],
+                    "label-sm": ["Public Sans"],
+                    "label-md": ["Public Sans"],
+                    "data-table": ["Public Sans"],
+                    "h1": ["Public Sans"],
+                    "h2": ["Public Sans"],
+                    "body-md": ["Public Sans"],
+                    "h3": ["Public Sans"],
+                    "body-sm": ["Public Sans"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "1", "fontWeight": "500"}],
+                    "label-md": ["14px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "data-table": ["13px", {"lineHeight": "1.4", "fontWeight": "400"}],
+                    "h1": ["40px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "h2": ["32px", {"lineHeight": "1.25", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "h3": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .scanning-line {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #188ace, transparent);
+            animation: scan 3s linear infinite;
+            position: absolute;
+            width: 100%;
+            z-index: 10;
+        }
+        @keyframes scan {
+            0% { top: 10%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 90%; opacity: 0; }
+        }
+        .face-bracket {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-color: #188ace;
+            border-width: 3px;
+        }
+    </style>
+<script src="data.js"></script>
+</head>
+<body class="bg-background font-body-md text-on-surface antialiased">
+<!-- TopNavBar -->
+<header class="flex items-center justify-between px-8 h-16 w-full z-40 bg-white border-b border-slate-200 fixed top-0 left-0">
+<div class="flex items-center gap-base">
+<span class="text-lg font-bold text-slate-900 tracking-tight">College Attendance System</span>
+</div>
+<div class="flex-1 max-w-md mx-gutter hidden md:block">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary-container/20 focus:border-primary-container text-sm transition-all" placeholder="Search system records..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-gutter">
+<div class="flex items-center gap-sm">
+<button class="material-symbols-outlined text-slate-500 hover:bg-slate-50 p-2 rounded-full transition-colors">notifications</button>
+<button class="material-symbols-outlined text-slate-500 hover:bg-slate-50 p-2 rounded-full transition-colors">settings</button>
+<button class="material-symbols-outlined text-slate-500 hover:bg-slate-50 p-2 rounded-full transition-colors">help</button>
+</div>
+<div class="h-8 w-8 rounded-full bg-slate-200 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="professional portrait of an administrative official in a clean suit" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB339q_SG21MA-MS1iXMsd5IfHVXtVE-fygmWY25seirbYXRGehYn44VCCdpa4MLqL24k-vENG31fLjZsdwO0giLE5amkog2ANt0GYbBC5W1VTDWl3Y3N-tl655SXNfPu6Lvt098BgkpnGq7-fyD2_ceSmazQcWE_GNxD4rI80Jkh60fS8JXUWY0CqmqbdNTLY1wQ0BmYNQk-kvd92MGNRlCYUjPzCnegYZOaxdLGpY4JUOHnpNr5NQ_s-kDI1nPO7NdXE-xr_thwpB"/>
+</div>
+</div>
+</header>
+<div class="flex pt-16 min-h-screen">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 border-r sticky top-16 bg-slate-50 flex flex-col py-6 border-slate-200 shrink-0">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 bg-primary-container flex items-center justify-center rounded">
+<span class="material-symbols-outlined text-white" data-weight="fill">face</span>
+</div>
+<div>
+<p class="font-bold text-[#0F172A] uppercase tracking-wider text-xs">Admin Portal</p>
+<p class="text-[10px] text-slate-500 uppercase tracking-tighter">Department of Registrar</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-slate-600 px-6 py-3 hover:text-[#0F172A] hover:bg-slate-100 transition-all flex items-center gap-sm" href="dashboard.html">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="text-slate-600 px-6 py-3 hover:text-[#0F172A] hover:bg-slate-100 transition-all flex items-center gap-sm" href="attendance.html">
+<span class="material-symbols-outlined">list_alt</span>
+<span class="font-label-md text-label-md">Attendance Log</span>
+</a>
+<a class="text-slate-600 px-6 py-3 hover:text-[#0F172A] hover:bg-slate-100 transition-all flex items-center gap-sm" href="students.html">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md text-label-md">Student Management</span>
+</a>
+<a class="bg-white text-[#0F172A] border-r-4 border-[#0F172A] font-bold px-6 py-3 flex items-center gap-sm" href="recognition.html">
+<span class="material-symbols-outlined">face</span>
+<span class="font-label-md text-label-md">Recognition Interface</span>
+</a>
+</nav>
+<div class="mt-auto px-6">
+<button class="w-full flex items-center gap-sm text-slate-600 px-0 py-3 hover:text-error transition-all">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-md text-label-md">Log Out</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 p-margin bg-surface">
+<div class="max-w-7xl mx-auto flex flex-col h-full gap-gutter">
+<!-- Breadcrumbs & Status -->
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-xs text-slate-500">
+<span class="text-label-sm font-label-sm uppercase">University</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="text-label-sm font-label-sm uppercase">College of Engineering</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="text-label-sm font-label-sm uppercase text-slate-900 font-bold">Recognition Session</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="flex items-center gap-xs px-3 py-1 bg-green-50 border border-green-200 rounded-full">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="text-[11px] font-bold text-green-700 uppercase tracking-tight">System Online</span>
+</div>
+<span id="current-time" class="text-label-sm font-label-sm text-slate-400">Current Time: —</span>
+</div>
+</div>
+<!-- Recognition Area Bento Grid -->
+<div class="grid grid-cols-12 gap-gutter flex-1 min-h-0">
+<!-- Live Feed Section (Camera) -->
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-gutter">
+<div class="relative flex-1 bg-slate-900 rounded-xl border border-slate-800 overflow-hidden group">
+<!-- Live Camera Feed Image Placeholder -->
+<!-- Permission overlay -->
+<div id="cam-permission" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 z-20">
+  <div class="text-center">
+    <div class="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4 border border-slate-700">
+      <span class="material-symbols-outlined text-4xl text-slate-400">videocam</span>
+    </div>
+    <p class="text-white font-bold text-lg mb-1">Camera Access Required</p>
+    <p class="text-slate-400 text-sm mb-6">Allow camera to start facial recognition</p>
+    <button id="start-camera-btn" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-lg transition-colors flex items-center gap-2 mx-auto">
+      <span class="material-symbols-outlined text-sm">videocam</span>
+      Start Camera
+    </button>
+    <p id="cam-error" class="text-red-400 text-xs mt-3 hidden"></p>
+  </div>
+</div>
+<!-- Live camera video -->
+<video id="cam-video" class="absolute inset-0 w-full h-full object-cover opacity-80 hidden" autoplay muted playsinline></video>
+<!-- Face detection canvas overlay -->
+<canvas id="cam-canvas" class="absolute inset-0 w-full h-full pointer-events-none hidden"></canvas>
+<!-- Capture flash overlay -->
+<div id="capture-flash" class="absolute inset-0 bg-white opacity-0 pointer-events-none transition-opacity duration-75 z-10"></div>
+<!-- Scanning Overlays -->
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+<!-- Recognition Brackets -->
+<div class="relative w-64 h-64 border-2 border-dashed border-white/20 rounded-2xl flex items-center justify-center">
+<div class="face-bracket border-t-4 border-l-4 top-0 left-0 rounded-tl-xl"></div>
+<div class="face-bracket border-t-4 border-r-4 top-0 right-0 rounded-tr-xl"></div>
+<div class="face-bracket border-b-4 border-l-4 bottom-0 left-0 rounded-bl-xl"></div>
+<div class="face-bracket border-b-4 border-r-4 bottom-0 right-0 rounded-br-xl"></div>
+<div class="scanning-line"></div>
+</div>
+</div>
+<!-- Feed Controls -->
+<div class="absolute bottom-gutter left-1/2 -translate-x-1/2 flex items-center gap-sm bg-slate-900/80 backdrop-blur-md p-2 rounded-full border border-white/10">
+<div id="cam-status-pill" class="flex items-center gap-xs px-4 py-2 bg-slate-800 text-white rounded-full">
+  <span id="cam-status-dot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+  <span id="cam-status-text" class="text-label-sm font-label-sm">Camera Off</span>
+</div>
+<div id="detect-progress-wrap" class="hidden flex items-center gap-2 px-4 py-2 bg-emerald-900/60 text-emerald-300 rounded-full">
+  <span class="material-symbols-outlined text-sm animate-pulse">face</span>
+  <span class="text-label-sm font-label-sm">Face Detected</span>
+  <div class="w-16 h-1 bg-slate-700 rounded-full overflow-hidden">
+    <div id="detect-progress-bar" class="h-full bg-emerald-400 transition-all duration-200" style="width:0%"></div>
+  </div>
+</div>
+<button id="toggle-camera-btn" class="flex items-center gap-xs px-4 py-2 bg-slate-800 text-white rounded-full hover:scale-95 transition-all hidden">
+  <span class="material-symbols-outlined text-sm">videocam_off</span>
+  <span class="text-label-sm font-label-sm">Stop Camera</span>
+</button>
+<div class="w-[1px] h-4 bg-white/20 mx-1"></div>
+<button id="manual-capture-btn" class="hidden flex items-center gap-xs px-4 py-2 bg-white text-slate-900 rounded-full hover:scale-95 transition-all">
+  <span class="material-symbols-outlined text-sm">photo_camera</span>
+  <span class="text-label-sm font-label-sm">Capture</span>
+</button>
+</div>
+<!-- Metadata Overlays -->
+<div class="absolute top-gutter left-gutter">
+<div class="bg-black/40 backdrop-blur p-3 rounded border border-white/10 text-white font-mono text-[10px]">
+<p>CAM_ID: REG_HALL_01</p>
+<p id="cam-fps">FPS: —</p>
+<p id="cam-res">RESOLUTION: —</p>
+<p id="cam-tracking" class="text-slate-400 mt-1">TRACKING: STANDBY</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Recognition Sidebar (Real-time Results) -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-gutter">
+<!-- Verification Status Card -->
+<div class="bg-white border border-slate-200 rounded-xl p-md flex flex-col items-center justify-center text-center shadow-sm h-full max-h-[500px]">
+<div class="mb-md">
+<div class="w-32 h-32 rounded-full border-4 border-green-500 p-2 relative flex items-center justify-center bg-slate-100"><span id="rec-avatar" class="text-2xl font-bold text-slate-600">—</span>
+
+<div class="absolute -bottom-2 -right-2 w-12 h-12 bg-green-500 rounded-full flex items-center justify-center border-4 border-white">
+<span class="material-symbols-outlined text-white text-2xl" data-weight="fill">check</span>
+</div>
+</div>
+</div>
+<div class="space-y-xs mb-lg">
+<h2 id="rec-status" class="font-h2 text-h2 text-emerald-600 tracking-tight">✓ Verified</h2>
+<p id="rec-badge" class="px-4 py-1.5 rounded-full text-sm font-bold bg-emerald-100 text-emerald-700">Present</p>
+</div>
+<div class="w-full space-y-base text-left">
+<div class="flex justify-between items-center py-base border-b border-slate-100">
+<span class="text-slate-400 text-label-sm font-label-sm uppercase">Student Name</span>
+<span id="rec-name" class="text-slate-900 font-bold">—</span>
+</div>
+<div class="flex justify-between items-center py-base border-b border-slate-100">
+<span class="text-slate-400 text-label-sm font-label-sm uppercase">Student ID</span>
+<span id="rec-id" class="text-slate-900 font-bold">—</span>
+</div>
+<div class="flex justify-between items-center py-base border-b border-slate-100">
+<span class="text-slate-400 text-label-sm font-label-sm uppercase">Course</span>
+<span id="rec-dept" class="text-slate-900 font-bold">—</span>
+</div>
+<div class="flex justify-between items-center py-base">
+<span class="text-slate-400 text-label-sm font-label-sm uppercase">Year Level</span>
+<span id="rec-conf" class="text-slate-900 font-bold">—</span>
+</div>
+</div>
+<div class="mt-lg w-full">
+<button class="w-full py-3 bg-[#0F172A] text-white rounded font-label-md text-sm hover:opacity-90 transition-opacity uppercase tracking-widest">
+                                    View Full Profile
+                                </button>
+</div>
+</div>
+<!-- Recent Activity / Queue -->
+<div class="bg-slate-50 border border-slate-200 rounded-xl p-md flex flex-col flex-1 overflow-hidden">
+<h3 class="text-label-md font-label-md uppercase text-slate-500 mb-base">Recent Logs</h3>
+<div class="flex-1 overflow-y-auto space-y-sm">
+<!-- Log Row -->
+<div class="bg-white p-sm rounded border border-slate-200 flex items-center gap-sm">
+<div class="w-10 h-10 bg-slate-200 rounded overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="portrait of a college student in causal attire" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0jbyHxPds3PGt1EQ353xD4yNdSLmRkLwNJ9Rm3OqgeNy-Q0SYu5ea6XqpoiaxK0ythSZ8nc-rZuEf8sML_tAl2eJ7fpFMlK4434ZpCORpQgizANJm1GRW41IsaNK9R5YRVRYqezUT-IDrg11IRcnwSuFtS9sTu9nE0n8IsvWQeVbsy9qrWDhl5KRpkN_UFf3udBbizp57oikheeWkNT0ibgaR2R9oWbR-BwMUDqRzK3PYueHqIK7GLqctBhPEImRgokxRcuovWrKH"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-bold text-slate-900 truncate">Julian Thorne</p>
+<p class="text-[10px] text-slate-500">10:41 AM • CS102</p>
+</div>
+<div class="px-2 py-1 bg-green-50 text-green-700 text-[10px] font-bold rounded">OK</div>
+</div>
+<!-- Log Row -->
+<div class="bg-white p-sm rounded border border-slate-200 flex items-center gap-sm opacity-60">
+<div class="w-10 h-10 bg-slate-200 rounded overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="portrait of a young student wearing glasses" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVl9ia93kyud2UcsjUyrq9N3QTF7ib12akbDm7_xYdB092_6YoUas3dYQaspJOrviWRaTCFfsU2FxcnZ8dwxlqolmCUkFbmS3UTI-8Z9bYUd_14DJsB5kvUL5I6LQBJWQWzGicbnHd30ybPuh92oFC59UdwgldAwq8IiaGWFEkZ1B_2U9Qvg4hRxfYVHJwt8v3cOeSy8cd_ppDSLwJcBszVMQpuuK4eksuOgBA-zU8G6Z_EsmzwxtolGKLfu4tlpmEXxvXaJ5BBQLW"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-bold text-slate-900 truncate">Marcus Wei</p>
+<p class="text-[10px] text-slate-500">10:39 AM • CS102</p>
+</div>
+<div class="px-2 py-1 bg-green-50 text-green-700 text-[10px] font-bold rounded">OK</div>
+</div>
+<!-- Log Row -->
+<div class="bg-white p-sm rounded border border-slate-200 flex items-center gap-sm opacity-40">
+<div class="w-10 h-10 bg-slate-200 rounded overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="portrait of a female student with focused expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA82vfvD8BEeAVFqsx2O5ePnlNWRHitMJt96ls7qZkoNAFx7qLrCdZYAKczmMoIht59Ngbb7En9l8CE5vcSXN7amlllOAWThb73YX5xf5VQmQRWKIqMfLTr3EZlGEKVvIAt3s0tTtzSMoEjSQ1M7GeghayRlDHhdayKL_TU_Ofn2b2qYuTHCicZ9v0FmoRNNkpOYOMp8zNjZRgzfJBg8-Sv4yVXmqcpquxFnBCKNh5bGw9eifeVwA5opNToUYM5ykTcnjW1J8uGcAju"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-bold text-slate-900 truncate">Sarah Jenkins</p>
+<p class="text-[10px] text-slate-500">10:35 AM • CS102</p>
+</div>
+<div class="px-2 py-1 bg-green-50 text-green-700 text-[10px] font-bold rounded">OK</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Floating Action Button Contextual (Only if relevant, hidden per instructions on Detail screens usually, but here as session control it stays for Dashboard/Home context) -->
+<!-- The manual says only render if purpose aligns perfectly. Here, this is the recognition screen, so a "Manual Entry" FAB might fit if the primary action isn't already handled. Since we have controls in the feed, we skip for UI purity. -->
+<script>
+let stream=null, detectionLoop=null, faceModelsLoaded=false, capturing=false;
+let frameCount=0, lastFpsTime=Date.now();
+
+const $ = id => document.getElementById(id);
+const video       = $('cam-video');
+const canvas      = $('cam-canvas');
+const permOverlay = $('cam-permission');
+const startBtn    = $('start-camera-btn');
+const toggleBtn   = $('toggle-camera-btn');
+const captureBtn  = $('manual-capture-btn');
+const camError    = $('cam-error');
+const statusDot   = $('cam-status-dot');
+const statusText  = $('cam-status-text');
+const detectWrap  = $('detect-progress-wrap');
+const detectBar   = $('detect-progress-bar');
+const fpsEl       = $('cam-fps');
+const resEl       = $('cam-res');
+const trackingEl  = $('cam-tracking');
+const captureFlash= $('capture-flash');
+const recStatus   = $('rec-status');
+const recBadge    = $('rec-badge');
+const recAvatar   = $('rec-avatar');
+const recName     = $('rec-name');
+const recId       = $('rec-id');
+const recDept     = $('rec-dept');
+const recConf     = $('rec-conf');
+
+// Clock
+setInterval(()=>{ const el=$('current-time'); if(el) el.textContent='Current Time: '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); },1000);
+
+async function loadModels() {
+  try {
+    const MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
+    faceModelsLoaded=true; console.log('✅ face-api loaded');
+  } catch(e) { console.warn('face-api fallback mode'); }
+}
+
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
+    video.srcObject=stream;
+    await new Promise(r=>video.addEventListener('loadedmetadata',r,{once:true}));
+    video.play();
+    if(permOverlay) permOverlay.classList.add('hidden');
+    if(video) video.classList.remove('hidden');
+    if(canvas) canvas.classList.remove('hidden');
+    if(toggleBtn) toggleBtn.classList.remove('hidden');
+    if(captureBtn) captureBtn.classList.remove('hidden');
+    setStatus('online','Camera Active');
+    const sync=()=>{ if(!canvas||!video) return; canvas.width=video.videoWidth||video.clientWidth; canvas.height=video.videoHeight||video.clientHeight; if(resEl) resEl.textContent=`RESOLUTION: ${canvas.width}×${canvas.height}`; };
+    sync(); video.addEventListener('resize',sync);
+    if(!faceModelsLoaded) await loadModels();
+    startDetectionLoop();
+  } catch(e) {
+    if(camError){ camError.textContent=e.name==='NotAllowedError'?'Camera denied. Allow in browser settings.':'Camera error: '+e.message; camError.classList.remove('hidden'); }
+  }
+}
+
+function stopCamera() {
+  if(detectionLoop){cancelAnimationFrame(detectionLoop);detectionLoop=null;}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  if(video){video.srcObject=null;video.classList.add('hidden');}
+  if(canvas)canvas.classList.add('hidden');
+  if(toggleBtn)toggleBtn.classList.add('hidden');
+  if(captureBtn)captureBtn.classList.add('hidden');
+  if(permOverlay)permOverlay.classList.remove('hidden');
+  if(detectWrap)detectWrap.classList.add('hidden');
+  setStatus('off','Camera Off');
+  if(trackingEl)trackingEl.textContent='TRACKING: STANDBY';
+  if(fpsEl)fpsEl.textContent='FPS: —';
+}
+
+let detectProgress=0;
+function startDetectionLoop() {
+  const ctx=canvas?.getContext('2d');
+  let holdFrames=0;
+  async function detect() {
+    if(video&&!video.paused&&video.readyState>=2) {
+      frameCount++;
+      const now=Date.now();
+      if(now-lastFpsTime>=1000){if(fpsEl)fpsEl.textContent=`FPS: ${frameCount}`;frameCount=0;lastFpsTime=now;}
+      if(faceModelsLoaded&&ctx) {
+        try {
+          const opts=new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.4});
+          const dets=await faceapi.detectAllFaces(video,opts);
+          ctx.clearRect(0,0,canvas.width,canvas.height);
+          if(dets.length>0){holdFrames=12;detectProgress=Math.min(100,detectProgress+8);drawBoxes(ctx,dets);if(trackingEl)trackingEl.textContent=`TRACKING: ${dets.length} FACE(S)`;}
+          else if(holdFrames>0){holdFrames--;}
+          else{detectProgress=Math.max(0,detectProgress-10);if(trackingEl)trackingEl.textContent='TRACKING: SCANNING';}
+        } catch(e){}
+      } else { detectProgress=75+Math.sin(Date.now()/400)*15; }
+      if(detectProgress>20){if(detectWrap)detectWrap.classList.remove('hidden');if(detectBar)detectBar.style.width=detectProgress+'%';}
+      else{if(detectWrap)detectWrap.classList.add('hidden');}
+    }
+    detectionLoop=requestAnimationFrame(detect);
+  }
+  detect();
+}
+
+function drawBoxes(ctx,dets) {
+  const sx=canvas.width/(video.videoWidth||1), sy=canvas.height/(video.videoHeight||1);
+  dets.forEach(det=>{
+    const{x,y,width:w,height:h}=det.box;
+    const[bx,by,bw,bh]=[x*sx,y*sy,w*sx,h*sy];
+    ctx.shadowBlur=16;ctx.shadowColor='#10b981';ctx.strokeStyle='#10b981';ctx.lineWidth=2.5;
+    ctx.beginPath();const cs=22;
+    [[bx,by,cs,0,0,cs],[bx+bw,by,-cs,0,0,cs],[bx,by+bh,cs,0,0,-cs],[bx+bw,by+bh,-cs,0,0,-cs]].forEach(([ox,oy,dx1,dy1,dx2,dy2])=>{ctx.moveTo(ox+dx1,oy+dy1);ctx.lineTo(ox,oy);ctx.lineTo(ox+dx2,oy+dy2);});
+    ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle='#10b981';ctx.font='bold 11px monospace';ctx.fillText(`FACE ${Math.round(det.score*100)}%`,bx+4,by-6);
+  });
+}
+
+function captureAndRecognize() {
+  if(capturing||!stream) return;
+  capturing=true;
+  if(captureFlash){captureFlash.style.opacity='0.85';setTimeout(()=>captureFlash.style.opacity='0',120);}
+  if(recStatus){recStatus.textContent='Scanning…';recStatus.className='text-amber-400 font-bold text-xl animate-pulse';}
+  if(recAvatar)recAvatar.textContent='⟳';
+
+  setTimeout(()=>{
+    const result=DB.recognize();
+    if(result){
+      const{student:st,confidence,status}=result;
+      const isLate=status==='Late';
+      if(recAvatar)recAvatar.textContent=st.avatar;
+      if(recName)recName.textContent=st.name;
+      if(recId)recId.textContent=st.student_id;
+      if(recDept)recDept.textContent=st.department;
+      if(recConf)recConf.textContent=Math.round(confidence*100)+'% confidence';
+      if(recStatus){recStatus.textContent=isLate?'⚠ Late Arrival':'✓ Verified';recStatus.className=`font-bold text-2xl tracking-tight ${isLate?'text-amber-500':'text-emerald-500'}`;}
+      if(recBadge){recBadge.textContent=status;recBadge.className=`px-4 py-1.5 rounded-full text-sm font-bold ${isLate?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700'}`;}
+    }
+    loadRecentLogs();
+    capturing=false;
+  },1200);
+}
+
+function loadRecentLogs() {
+  const el=document.querySelector('.flex-1.overflow-y-auto.space-y-sm');
+  if(!el) return;
+  const{rows}=DB.getAttendance({limit:6});
+  el.innerHTML=rows.map(r=>{
+    const time=new Date(r.check_in).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    const ok=r.status==='Present';
+    return `<div class="bg-white p-sm rounded border border-slate-200 flex items-center gap-sm">
+      <div class="w-10 h-10 bg-slate-200 rounded flex-shrink-0 flex items-center justify-center font-bold text-slate-600 text-xs">${r.avatar||'??'}</div>
+      <div class="flex-1 min-w-0"><p class="text-xs font-bold text-slate-900 truncate">${r.name||'—'}</p><p class="text-[10px] text-slate-500">${time} • ${r.course||'—'}</p></div>
+      <div class="px-2 py-1 ${ok?'bg-green-50 text-green-700':'bg-amber-50 text-amber-700'} text-[10px] font-bold rounded">${ok?'OK':'LATE'}</div>
+    </div>`;
+  }).join('');
+}
+
+function loadTerminals() {
+  const el=$('terminal-list');
+  if(!el) return;
+  el.innerHTML=DB.getTerminals().map(t=>`
+    <div class="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg">
+      <div><p class="text-sm font-bold text-slate-900">${t.name}</p><p class="text-xs text-slate-500">${t.location}</p></div>
+      <span class="px-2 py-1 text-[11px] font-semibold rounded-full ${t.status==='Online'?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'}">${t.status}</span>
+    </div>`).join('');
+}
+
+function setStatus(state,text) {
+  if(statusText)statusText.textContent=text;
+  if(statusDot)statusDot.className=`w-2 h-2 rounded-full ${state==='online'?'bg-emerald-400 animate-pulse':'bg-slate-500'}`;
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  loadTerminals(); loadRecentLogs(); loadModels();
+  if(startBtn)startBtn.addEventListener('click',startCamera);
+  if(toggleBtn)toggleBtn.addEventListener('click',()=>stream?stopCamera():startCamera());
+  if(captureBtn)captureBtn.addEventListener('click',captureAndRecognize);
+  document.addEventListener('keydown',e=>{if(e.code==='Space'&&stream&&!capturing){e.preventDefault();captureAndRecognize();}});
+  setInterval(loadRecentLogs,15000);
+});
+</script>
+</body></html>

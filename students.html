@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Student Management - College Attendance System</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "secondary-fixed": "#d5e3fd",
+            "secondary": "#515f74",
+            "on-secondary-fixed": "#0d1c2f",
+            "on-tertiary-fixed": "#001d31",
+            "inverse-on-surface": "#eff1f3",
+            "surface-container-high": "#e6e8ea",
+            "on-background": "#191c1e",
+            "outline": "#76777d",
+            "surface-dim": "#d8dadc",
+            "secondary-container": "#d5e3fd",
+            "on-secondary-container": "#57657b",
+            "surface-variant": "#e0e3e5",
+            "tertiary-fixed": "#cce5ff",
+            "tertiary-fixed-dim": "#93ccff",
+            "primary-fixed-dim": "#bec6e0",
+            "outline-variant": "#c6c6cd",
+            "inverse-surface": "#2d3133",
+            "primary-fixed": "#dae2fd",
+            "inverse-primary": "#bec6e0",
+            "on-primary-fixed-variant": "#3f465c",
+            "on-secondary": "#ffffff",
+            "tertiary": "#000000",
+            "on-secondary-fixed-variant": "#3a485c",
+            "on-surface": "#191c1e",
+            "error": "#ba1a1a",
+            "surface-container": "#eceef0",
+            "on-error": "#ffffff",
+            "primary-container": "#131b2e",
+            "tertiary-container": "#001d31",
+            "on-tertiary-container": "#188ace",
+            "error-container": "#ffdad6",
+            "surface": "#f7f9fb",
+            "surface-container-highest": "#e0e3e5",
+            "surface-container-low": "#f2f4f6",
+            "on-tertiary-fixed-variant": "#004b73",
+            "surface-tint": "#565e74",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "on-error-container": "#93000a",
+            "on-primary": "#ffffff",
+            "on-primary-fixed": "#131b2e",
+            "background": "#f7f9fb",
+            "on-primary-container": "#7c839b",
+            "secondary-fixed-dim": "#b9c7e0",
+            "surface-bright": "#f7f9fb",
+            "on-surface-variant": "#45464d",
+            "primary": "#000000"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "32px",
+            "xl": "64px",
+            "sm": "12px",
+            "xs": "4px",
+            "lg": "40px",
+            "gutter": "16px",
+            "md": "24px",
+            "base": "8px"
+          },
+          "fontFamily": {
+            "body-lg": ["Public Sans"],
+            "label-sm": ["Public Sans"],
+            "label-md": ["Public Sans"],
+            "data-table": ["Public Sans"],
+            "h1": ["Public Sans"],
+            "h2": ["Public Sans"],
+            "body-md": ["Public Sans"],
+            "h3": ["Public Sans"],
+            "body-sm": ["Public Sans"]
+          },
+          "fontSize": {
+            "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+            "label-sm": ["12px", {"lineHeight": "1", "fontWeight": "500"}],
+            "label-md": ["14px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+            "data-table": ["13px", {"lineHeight": "1.4", "fontWeight": "400"}],
+            "h1": ["40px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "h2": ["32px", {"lineHeight": "1.25", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+            "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+            "h3": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+            "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}]
+          }
+        },
+      },
+    }
+  </script>
+<script src="data.js"></script>
+</head>
+<body class="bg-background text-on-surface font-body-md antialiased">
+<div class="flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 border-r sticky top-0 bg-slate-50 border-slate-200 flex flex-col py-6">
+<div class="px-6 mb-10">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white" data-icon="account_balance">account_balance</span>
+</div>
+<div>
+<h2 class="font-bold text-[#0F172A] uppercase tracking-wider text-xs">Admin Portal</h2>
+<p class="text-[10px] text-slate-500 font-medium">Department of Registrar</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 text-slate-600 px-6 py-3 hover:text-[#0F172A] hover:bg-slate-100 transition-all ease-in-out duration-200" href="dashboard.html">
+<span class="material-symbols-outlined text-lg" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 text-slate-600 px-6 py-3 hover:text-[#0F172A] hover:bg-slate-100 transition-all ease-in-out duration-200" href="attendance.html">
+<span class="material-symbols-outlined text-lg" data-icon="list_alt">list_alt</span>
+<span class="font-label-md text-label-md">Attendance Log</span>
+</a>
+<!-- Active Tab -->
+<a class="flex items-center gap-3 bg-white text-[#0F172A] border-r-4 border-[#0F172A] font-bold px-6 py-3 transition-all ease-in-out duration-200" href="students.html">
+<span class="material-symbols-outlined text-lg" data-icon="group">group</span>
+<span class="font-label-md text-label-md">Student Management</span>
+</a>
+<a class="flex items-center gap-3 text-slate-600 px-6 py-3 hover:text-[#0F172A] hover:bg-slate-100 transition-all ease-in-out duration-200" href="recognition.html">
+<span class="material-symbols-outlined text-lg" data-icon="face">face</span>
+<span class="font-label-md text-label-md">Recognition Interface</span>
+</a>
+</nav>
+<div class="mt-auto px-6">
+<button class="flex items-center gap-3 text-slate-600 w-full py-3 hover:text-error transition-all duration-200">
+<span class="material-symbols-outlined text-lg" data-icon="logout">logout</span>
+<span class="font-label-md text-label-md">Log Out</span>
+</button>
+</div>
+</aside>
+<div class="flex-1 flex flex-col overflow-hidden">
+<!-- TopNavBar -->
+<header class="flex items-center justify-between px-8 h-16 w-full z-40 bg-white border-b border-slate-200 font-['Public_Sans'] text-sm antialiased">
+<div class="flex items-center gap-6">
+<h1 class="text-lg font-bold text-slate-900 tracking-tight">College Attendance System</h1>
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" data-icon="search">search</span>
+<input class="bg-slate-50 border-none rounded-full py-2 pl-10 pr-4 w-64 text-xs focus:ring-2 focus:ring-primary-container" placeholder="Search students, IDs..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-slate-600" data-icon="notifications">notifications</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-slate-600" data-icon="settings">settings</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-slate-600" data-icon="help">help</span>
+</button>
+<div class="h-8 w-px bg-slate-200 mx-1"></div>
+<img alt="Administrator Profile" class="w-8 h-8 rounded-full border border-slate-200 object-cover" data-alt="professional headshot of a middle-aged university registrar in a dark suit with a neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuxkq1XHvJrQhf1_nvJC3lAV4lavWgXH6Lb3UQ5hoUZOaji1RC5DLMI4ZJOa2LAYpHjiH8IV-3IG-JDjv-MqCD2dZN9Gut2Z5A1ejWJ9kkz90sKRWTDmcgfmY8wQgHZVyzRpihQBowyS4CAnQ4NQgBNB2S7-ZLv2xV4CG8ceHZbqH7rW3Wjf2h7okud8OkFBxJzlt0y6c9atNSAcWDVlJishbg-MUXetmysvWuZehfU4KoxjwJYTRNfM0yfeFsFZhrJ99X3yUyTw2i"/>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 overflow-y-auto p-8 bg-background">
+<!-- Breadcrumbs -->
+<nav class="flex mb-6 text-slate-500 font-label-sm text-label-sm gap-2 items-center">
+<span>University</span>
+<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+<span>College of Engineering</span>
+<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+<span class="text-primary font-bold">Student Management</span>
+</nav>
+<!-- Header Actions -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="font-h2 text-h2 text-primary">Student Directory</h2>
+<p class="text-slate-500 font-body-sm mt-1">Manage enrollments and face recognition training data for 1,248 registered students.</p>
+</div>
+<button class="bg-[#0F172A] text-white px-5 py-2.5 rounded flex items-center gap-2 font-label-md text-label-md hover:bg-slate-800 transition-all scale-100 active:scale-95 duration-75">
+<span class="material-symbols-outlined text-lg" data-icon="person_add">person_add</span>
+            Add Student
+          </button>
+</div>
+<!-- Filter & Stats Bar -->
+<div class="grid grid-cols-12 gap-gutter mb-8">
+<div class="col-span-8 bg-white border border-slate-200 p-4 flex items-center gap-4 rounded">
+<div class="flex flex-1 items-center gap-2 bg-slate-50 px-3 py-2 rounded">
+<span class="material-symbols-outlined text-slate-400 text-sm" data-icon="filter_list">filter_list</span>
+<select class="bg-transparent border-none text-xs font-medium focus:ring-0 w-full">
+<option>All Departments</option>
+<option>Computer Science</option>
+<option>Electrical Engineering</option>
+<option>Mechanical Engineering</option>
+</select>
+</div>
+<div class="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded">
+<span class="material-symbols-outlined text-slate-400 text-sm" data-icon="calendar_month">calendar_month</span>
+<select class="bg-transparent border-none text-xs font-medium focus:ring-0">
+<option>Year 2024</option>
+<option>Year 2023</option>
+</select>
+</div>
+<div class="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded">
+<span class="material-symbols-outlined text-slate-400 text-sm" data-icon="check_circle">check_circle</span>
+<select class="bg-transparent border-none text-xs font-medium focus:ring-0">
+<option>Recognition Ready</option>
+<option>Missing Data</option>
+</select>
+</div>
+</div>
+<div class="col-span-4 bg-primary-container text-white p-4 flex items-center justify-between rounded">
+<div>
+<p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Total Records</p>
+<h3 class="text-2xl font-bold">1,248</h3>
+</div>
+<div class="text-right">
+<p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Face Trained</p>
+<h3 class="text-2xl font-bold text-on-tertiary-container">98.2%</h3>
+</div>
+</div>
+</div>
+<!-- Bento Grid of Students -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-gutter">
+<!-- Student Card 1 -->
+<div class="bg-white border border-slate-200 group hover:border-[#0F172A] transition-all duration-200 overflow-hidden">
+<div class="relative h-48 bg-slate-100 overflow-hidden">
+<img alt="Student Photo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="high-quality studio portrait of a male college student with glasses, sharp focus on facial features for recognition" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhwRKtUPej1knuZswFKnzjJhl6Ne43sxPF5awz_hYqBJlbSQViwwGhQW5tTlhV5yypTUHqIWF6yVMsdompYRzCpcxTph6xxr-PJQHqdCnCcG_bX3dM8MqV1M8Vi7mwSpEawFg7dkB9qDJpguj5k5B1XXP1Ok1Qowcb6dVW6KdHE1dmrvQTeSeMRcV9ErwThoP7BZ6Bu0nR-i3NcwL_yYpQquBLYlPGvXF-0U_MG15h1LSGF4qBd9755pqB4wZak3sEiJUXZ8dybmBF"/>
+<div class="absolute top-2 right-2 px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase">Trained</div>
+</div>
+<div class="p-4">
+<h4 class="font-h3 text-base text-primary mb-0.5">Julian Alvarez</h4>
+<p class="text-slate-500 text-xs font-medium mb-3">ID: 2024-ENG-0822</p>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-slate-400 text-base" data-icon="engineering">engineering</span>
+<span class="text-xs text-slate-600">Computer Science</span>
+</div>
+<div class="flex items-center justify-between pt-3 border-t border-slate-100">
+<button class="text-xs font-bold text-[#0F172A] hover:underline uppercase tracking-tight">View Profile</button>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-slate-100 text-slate-400">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Student Card 2 -->
+<div class="bg-white border border-slate-200 group hover:border-[#0F172A] transition-all duration-200 overflow-hidden">
+<div class="relative h-48 bg-slate-100 overflow-hidden">
+<img alt="Student Photo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="clean passport-style portrait of a female student against a white wall, neutral expression, clear lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaskLBj2glklp0WwWRj2mTjqvUj8yY8YL-ZJPkNuqV3Jjb4b1YgIo9qX2qC8YWsRHQE_X5BLiyFnt7x4u1icIXbbkAr_7Gj61w3QShJyEh5uPd47OIDtZ3v_C7bQax_38lM_x1Iq-VgnDf0eInEFU1P8MBcZE6GL6jy3GAi8BY1zxRgag1y7BFJncqaqi_95SnpqRhi31hNqnKHU2ajQYKX1ud_SUv5KazZ7-oGauukctAvQ7Vdk2z28MYnCu7es0g_I0tWaMjuDnP"/>
+<div class="absolute top-2 right-2 px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase">Trained</div>
+</div>
+<div class="p-4">
+<h4 class="font-h3 text-base text-primary mb-0.5">Sarah Jenkins</h4>
+<p class="text-slate-500 text-xs font-medium mb-3">ID: 2024-ENG-0914</p>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-slate-400 text-base" data-icon="psychology">psychology</span>
+<span class="text-xs text-slate-600">Bio-Medical Eng.</span>
+</div>
+<div class="flex items-center justify-between pt-3 border-t border-slate-100">
+<button class="text-xs font-bold text-[#0F172A] hover:underline uppercase tracking-tight">View Profile</button>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-slate-100 text-slate-400">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Student Card 3 (Action Required) -->
+<div class="bg-white border border-error/20 group hover:border-error transition-all duration-200 overflow-hidden">
+<div class="relative h-48 bg-slate-200 overflow-hidden flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-400 text-5xl" data-icon="no_photography">no_photography</span>
+<div class="absolute top-2 right-2 px-2 py-1 bg-error-container text-error text-[10px] font-bold rounded uppercase">No Face Data</div>
+</div>
+<div class="p-4 bg-error-container/5">
+<h4 class="font-h3 text-base text-primary mb-0.5">Marcus Holloway</h4>
+<p class="text-slate-500 text-xs font-medium mb-3">ID: 2024-ENG-0112</p>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-slate-400 text-base" data-icon="electric_bolt">electric_bolt</span>
+<span class="text-xs text-slate-600">Electrical Engineering</span>
+</div>
+<div class="flex items-center justify-between pt-3 border-t border-error/10">
+<button class="text-xs font-bold text-error hover:underline uppercase tracking-tight flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="upload">upload</span> Train Now
+                </button>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-slate-100 text-slate-400">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Student Card 4 -->
+<div class="bg-white border border-slate-200 group hover:border-[#0F172A] transition-all duration-200 overflow-hidden">
+<div class="relative h-48 bg-slate-100 overflow-hidden">
+<img alt="Student Photo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="front-facing portrait of a young male student smiling slightly, well-lit indoor university setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBp3zsjsUDb5ImKzX8L-YDNohn_BfW5xhM9W5UoQyLm0GiY3SQNCibXchemqsPfU9lWAqlO3gDtOT29vSZledATv85Mw9E5bDclu_tJXbqxUQ4u-eY1MXl83sYnQelcdnflAvRae6AUlf7r-BbG1tpqAEbfpPtvozk9FE4eJAWSB-RMTAlnqZ-D3gL4mAW8abQjVXWSIzRE0euwRdNxsoTj-jCY5OjiVyebQyJit_3F6SA55vIwosAOn-rR1CMBY2qXqh-4Yjpst79N"/>
+<div class="absolute top-2 right-2 px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase">Trained</div>
+</div>
+<div class="p-4">
+<h4 class="font-h3 text-base text-primary mb-0.5">David Chen</h4>
+<p class="text-slate-500 text-xs font-medium mb-3">ID: 2024-ENG-0556</p>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-slate-400 text-base" data-icon="construction">construction</span>
+<span class="text-xs text-slate-600">Civil Engineering</span>
+</div>
+<div class="flex items-center justify-between pt-3 border-t border-slate-100">
+<button class="text-xs font-bold text-[#0F172A] hover:underline uppercase tracking-tight">View Profile</button>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-slate-100 text-slate-400">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Pagination -->
+<div class="mt-12 flex items-center justify-between border-t border-slate-200 pt-6">
+<p class="text-xs font-medium text-slate-500">Showing 1 to 4 of 1,248 students</p>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center border border-slate-200 text-slate-400 hover:bg-slate-50 rounded">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center bg-primary-container text-white text-xs font-bold rounded">1</button>
+<button class="w-8 h-8 flex items-center justify-center border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 rounded">2</button>
+<button class="w-8 h-8 flex items-center justify-center border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 rounded">3</button>
+<span class="flex items-center px-2 text-slate-400">...</span>
+<button class="w-8 h-8 flex items-center justify-center border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 rounded">312</button>
+<button class="w-8 h-8 flex items-center justify-center border border-slate-200 text-slate-400 hover:bg-slate-50 rounded">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</main>
+</div>
+</div>
+<!-- Add Student Modal Overlay (Hidden State representation) -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+<!-- This is a layout representation of the "Add Student" flow -->
+<div class="bg-white w-full max-w-2xl rounded shadow-2xl overflow-hidden flex">
+<div class="w-1/3 bg-[#0F172A] p-8 text-white">
+<h3 class="text-lg font-bold mb-6">New Student Registration</h3>
+<ul class="space-y-6">
+<li class="flex items-center gap-3">
+<span class="w-6 h-6 rounded-full bg-on-tertiary-container text-primary flex items-center justify-center text-[10px] font-bold">1</span>
+<span class="text-xs font-medium">Basic Information</span>
+</li>
+<li class="flex items-center gap-3 opacity-50">
+<span class="w-6 h-6 rounded-full border border-slate-500 text-white flex items-center justify-center text-[10px] font-bold">2</span>
+<span class="text-xs font-medium">Face Training</span>
+</li>
+<li class="flex items-center gap-3 opacity-50">
+<span class="w-6 h-6 rounded-full border border-slate-500 text-white flex items-center justify-center text-[10px] font-bold">3</span>
+<span class="text-xs font-medium">Review &amp; Save</span>
+</li>
+</ul>
+</div>
+<div class="w-2/3 p-8">
+<div class="flex justify-between items-center mb-6">
+<h4 class="font-h3 text-xl text-primary">Student Details</h4>
+<button class="text-slate-400 hover:text-slate-600"><span class="material-symbols-outlined" data-icon="close">close</span></button>
+</div>
+<form class="space-y-4">
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1">
+<label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">First Name</label>
+<input class="w-full border-slate-200 rounded text-sm focus:border-primary-container focus:ring-primary-container" type="text"/>
+</div>
+<div class="space-y-1">
+<label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Last Name</label>
+<input class="w-full border-slate-200 rounded text-sm focus:border-primary-container focus:ring-primary-container" type="text"/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Student ID Number</label>
+<input class="w-full border-slate-200 rounded text-sm focus:border-primary-container focus:ring-primary-container" placeholder="YYYY-COL-XXXX" type="text"/>
+</div>
+<div class="space-y-1">
+<label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Department</label>
+<select class="w-full border-slate-200 rounded text-sm focus:border-primary-container focus:ring-primary-container">
+<option>Computer Science &amp; Engineering</option>
+<option>Mechanical Engineering</option>
+<option>Civil Engineering</option>
+</select>
+</div>
+<div class="pt-6 flex justify-end gap-3">
+<button class="px-6 py-2 border border-slate-200 rounded text-xs font-bold uppercase tracking-wide hover:bg-slate-50" type="button">Cancel</button>
+<button class="px-6 py-2 bg-primary-container text-white rounded text-xs font-bold uppercase tracking-wide hover:bg-slate-800" type="submit">Next Step</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<!-- Add Student Modal -->
+<div id="add-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+  <div class="bg-white rounded-lg p-8 w-full max-w-md shadow-xl">
+    <h3 class="text-lg font-bold text-slate-900 mb-6">Add New Student</h3>
+    <div class="space-y-4">
+      <div><label class="block text-xs font-semibold text-slate-500 mb-1">Student ID *</label>
+        <input id="f-sid" class="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900" placeholder="e.g. CS2410"/></div>
+      <div><label class="block text-xs font-semibold text-slate-500 mb-1">Full Name *</label>
+        <input id="f-name" class="w-full border border-slate-200 rounded px-3 py-2 text-sm" placeholder="e.g. John Doe"/></div>
+      <div><label class="block text-xs font-semibold text-slate-500 mb-1">Email</label>
+        <input id="f-email" type="email" class="w-full border border-slate-200 rounded px-3 py-2 text-sm" placeholder="john@college.edu"/></div>
+      <div><label class="block text-xs font-semibold text-slate-500 mb-1">Department *</label>
+        <select id="f-dept" class="w-full border border-slate-200 rounded px-3 py-2 text-sm">
+          <option>Computer Science</option>
+          <option>Electrical Engineering</option>
+          <option>Mechanical Engineering</option>
+          <option>Civil Engineering</option>
+        </select></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Course</label>
+          <input id="f-course" class="w-full border border-slate-200 rounded px-3 py-2 text-sm" placeholder="CS-101"/></div>
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Year</label>
+          <select id="f-year" class="w-full border border-slate-200 rounded px-3 py-2 text-sm">
+            <option value="1">Year 1</option><option value="2">Year 2</option>
+            <option value="3">Year 3</option><option value="4">Year 4</option>
+          </select></div>
+      </div>
+    </div>
+    <div id="add-error" class="hidden mt-3 text-sm text-red-600"></div>
+    <div class="flex gap-3 mt-6">
+      <button onclick="closeModal()" class="flex-1 border border-slate-200 rounded px-4 py-2 text-sm font-semibold hover:bg-slate-50">Cancel</button>
+      <button onclick="addStudent()" class="flex-1 bg-slate-900 text-white rounded px-4 py-2 text-sm font-semibold hover:bg-slate-800">Add Student</button>
+    </div>
+  </div>
+</div>
+<script>
+function loadStudents() {
+  const {rows} = DB.getStudents({limit:100});
+  const tbody = document.getElementById('students-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = rows.map((s,i) => {
+    const badge = s.bio_status==='Enrolled'?'bg-emerald-100 text-emerald-700':s.bio_status==='Pending'?'bg-amber-100 text-amber-700':'bg-red-100 text-red-700';
+    return `<tr class="${i%2===1?'bg-slate-50/30':''} hover:bg-slate-50">
+      <td class="px-6 py-4"><div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 text-sm">${s.avatar}</div>
+        <div><p class="font-bold text-slate-900 text-sm">${s.name}</p><p class="text-[11px] text-slate-500">${s.email||'—'}</p></div>
+      </div></td>
+      <td class="px-6 py-4 text-sm text-slate-600 font-mono">${s.student_id}</td>
+      <td class="px-6 py-4 text-sm text-slate-600">${s.department}</td>
+      <td class="px-6 py-4 text-sm text-slate-600">${s.course||'—'}</td>
+      <td class="px-6 py-4 text-sm text-slate-600">Year ${s.year}</td>
+      <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-[11px] font-semibold ${badge}">${s.bio_status}</span></td>
+      <td class="px-6 py-4 text-right flex items-center justify-end gap-2">
+        <button onclick="toggleBio(${s.id},'${s.bio_status}')" class="text-slate-400 hover:text-blue-500" title="Toggle biometric">
+          <span class="material-symbols-outlined text-sm">face_retouching_natural</span>
+        </button>
+        <button onclick="delStudent(${s.id})" class="text-slate-400 hover:text-red-500">
+          <span class="material-symbols-outlined text-sm">delete</span>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleBio(id, cur) {
+  DB.updateStudent(id, {bio_status: cur==='Enrolled'?'Pending':'Enrolled'});
+  loadStudents();
+}
+function delStudent(id) {
+  if (!confirm('Remove this student?')) return;
+  DB.deleteStudent(id); loadStudents();
+}
+function openModal()  { document.getElementById('add-modal').classList.remove('hidden'); }
+function closeModal() { document.getElementById('add-modal').classList.add('hidden'); document.getElementById('add-error').classList.add('hidden'); }
+function addStudent() {
+  const body = {
+    student_id: document.getElementById('f-sid').value.trim(),
+    name:       document.getElementById('f-name').value.trim(),
+    email:      document.getElementById('f-email').value.trim(),
+    department: document.getElementById('f-dept').value,
+    course:     document.getElementById('f-course').value.trim(),
+    year:       document.getElementById('f-year').value,
+  };
+  if (!body.student_id||!body.name) {
+    document.getElementById('add-error').textContent='Student ID and Name required.';
+    document.getElementById('add-error').classList.remove('hidden'); return;
+  }
+  try { DB.addStudent(body); closeModal(); loadStudents(); }
+  catch(e) { document.getElementById('add-error').textContent=e.message; document.getElementById('add-error').classList.remove('hidden'); }
+}
+document.addEventListener('DOMContentLoaded', loadStudents);
+</script>
+</body></html>
