@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Login — College Attendance System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style>
+  body { font-family: 'Public Sans', sans-serif; }
+  .gradient-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f2744 100%); }
+  .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+  .role-card { transition: all 0.2s; cursor: pointer; }
+  .role-card:hover { transform: translateY(-2px); }
+  .role-card.selected { border-color: #3b82f6; background: rgba(59,130,246,0.15); }
+  input:focus { outline: none; }
+  .animate-float { animation: float 3s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+</style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+
+<!-- Background decorative elements -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none">
+  <div class="absolute -top-40 -right-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+  <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+</div>
+
+<div class="w-full max-w-md relative z-10">
+  <!-- Logo -->
+  <div class="text-center mb-8">
+    <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-float shadow-xl shadow-blue-500/30">
+      <span class="material-symbols-outlined text-white text-3xl">school</span>
+    </div>
+    <h1 class="text-2xl font-bold text-white">College Attendance System</h1>
+    <p class="text-slate-400 text-sm mt-1">Facial Recognition Portal</p>
+  </div>
+
+  <!-- Card -->
+  <div class="glass rounded-2xl p-8 shadow-2xl">
+    <!-- Tabs -->
+    <div class="flex bg-white/5 rounded-xl p-1 mb-6">
+      <button id="tab-login" onclick="switchTab('login')"
+        class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all text-white bg-blue-600">
+        Sign In
+      </button>
+      <button id="tab-signup" onclick="switchTab('signup')"
+        class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400">
+        Register
+      </button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="login-form">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5">Email Address</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">mail</span>
+            <input id="login-email" type="email" placeholder="you@college.edu"
+              class="w-full bg-white/5 border border-white/10 text-white pl-10 pr-4 py-3 rounded-xl text-sm placeholder-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5">Password</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">lock</span>
+            <input id="login-password" type="password" placeholder="••••••••"
+              class="w-full bg-white/5 border border-white/10 text-white pl-10 pr-12 py-3 rounded-xl text-sm placeholder-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"/>
+            <button onclick="togglePwd('login-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+              <span class="material-symbols-outlined text-xl">visibility</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="login-error" class="hidden mt-4 bg-red-500/20 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3"></div>
+
+      <button onclick="doLogin()"
+        class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20">
+        <span id="login-btn-text">Sign In</span>
+        <span id="login-spinner" class="hidden material-symbols-outlined text-lg animate-spin">autorenew</span>
+      </button>
+
+      <!-- Quick login hints -->
+      <div class="mt-6 pt-6 border-t border-white/10">
+        <p class="text-xs text-slate-500 font-semibold mb-3 uppercase tracking-widest">Quick Login</p>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="quickLogin('admin@college.edu','Admin@123')" class="glass text-xs text-slate-300 py-2 px-3 rounded-lg hover:border-blue-500/50 transition-all text-left">
+            <span class="text-blue-400 font-bold">Admin</span><br/>admin@college.edu
+          </button>
+          <button onclick="quickLogin('hod.cs@college.edu','Hod@1234')" class="glass text-xs text-slate-300 py-2 px-3 rounded-lg hover:border-blue-500/50 transition-all text-left">
+            <span class="text-emerald-400 font-bold">HoD CS</span><br/>hod.cs@college.edu
+          </button>
+          <button onclick="quickLogin('faculty1@college.edu','Faculty@123')" class="glass text-xs text-slate-300 py-2 px-3 rounded-lg hover:border-blue-500/50 transition-all text-left">
+            <span class="text-purple-400 font-bold">Faculty</span><br/>faculty1@college.edu
+          </button>
+          <button onclick="quickLogin('ethan@college.edu','Student@123')" class="glass text-xs text-slate-300 py-2 px-3 rounded-lg hover:border-blue-500/50 transition-all text-left">
+            <span class="text-amber-400 font-bold">Student</span><br/>ethan@college.edu
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIGNUP FORM -->
+    <div id="signup-form" class="hidden">
+      <!-- Role Selector -->
+      <p class="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-widest">Select Your Role</p>
+      <div class="grid grid-cols-2 gap-2 mb-5">
+        <div class="role-card glass rounded-xl p-3 border border-white/10" onclick="selectRole('student')" data-role="student">
+          <span class="material-symbols-outlined text-amber-400 text-2xl">school</span>
+          <p class="text-white text-xs font-bold mt-1">Student</p>
+        </div>
+        <div class="role-card glass rounded-xl p-3 border border-white/10" onclick="selectRole('faculty')" data-role="faculty">
+          <span class="material-symbols-outlined text-purple-400 text-2xl">person_book</span>
+          <p class="text-white text-xs font-bold mt-1">Faculty</p>
+        </div>
+        <div class="role-card glass rounded-xl p-3 border border-white/10" onclick="selectRole('hod')" data-role="hod">
+          <span class="material-symbols-outlined text-emerald-400 text-2xl">manage_accounts</span>
+          <p class="text-white text-xs font-bold mt-1">Head of Dept</p>
+        </div>
+        <div class="role-card glass rounded-xl p-3 border border-white/10" onclick="selectRole('admin')" data-role="admin">
+          <span class="material-symbols-outlined text-blue-400 text-2xl">admin_panel_settings</span>
+          <p class="text-white text-xs font-bold mt-1">Admin</p>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <input id="reg-name" type="text" placeholder="Full Name *"
+          class="w-full bg-white/5 border border-white/10 text-white px-4 py-3 rounded-xl text-sm placeholder-slate-500 focus:border-blue-500 transition-all"/>
+        <input id="reg-email" type="email" placeholder="Email Address *"
+          class="w-full bg-white/5 border border-white/10 text-white px-4 py-3 rounded-xl text-sm placeholder-slate-500 focus:border-blue-500 transition-all"/>
+        <input id="reg-password" type="password" placeholder="Password (min 6 chars) *"
+          class="w-full bg-white/5 border border-white/10 text-white px-4 py-3 rounded-xl text-sm placeholder-slate-500 focus:border-blue-500 transition-all"/>
+        <select id="reg-dept"
+          class="w-full bg-slate-800 border border-white/10 text-white px-4 py-3 rounded-xl text-sm focus:border-blue-500 transition-all">
+          <option value="">Select Department *</option>
+          <option>Computer Science</option>
+          <option>Electrical Engineering</option>
+          <option>Mechanical Engineering</option>
+          <option>Civil Engineering</option>
+          <option>Administration</option>
+        </select>
+        <input id="reg-sid" type="text" placeholder="Student ID (e.g. CS2406) *"
+          class="w-full bg-white/5 border border-white/10 text-white px-4 py-3 rounded-xl text-sm placeholder-slate-500 focus:border-blue-500 transition-all"/>
+        <input id="reg-eid" type="text" placeholder="Employee ID (e.g. FAC003)"
+          class="w-full bg-white/5 border border-white/10 text-white px-4 py-3 rounded-xl text-sm placeholder-slate-500 focus:border-blue-500 transition-all hidden"/>
+      </div>
+
+      <div id="reg-error" class="hidden mt-4 bg-red-500/20 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3"></div>
+
+      <button onclick="doRegister()"
+        class="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
+        <span id="reg-btn-text">Create Account</span>
+        <span id="reg-spinner" class="hidden material-symbols-outlined text-lg animate-spin">autorenew</span>
+      </button>
+    </div>
+  </div>
+
+  <p class="text-center text-slate-600 text-xs mt-4">
+    © 2024 College Attendance System · Powered by MongoDB + Express
+  </p>
+</div>
+
+<script>
+const API = '';
+let selectedRole = 'student';
+
+function switchTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('login-form').classList.toggle('hidden', !isLogin);
+  document.getElementById('signup-form').classList.toggle('hidden', isLogin);
+  document.getElementById('tab-login').className  = `flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${isLogin?'text-white bg-blue-600':'text-slate-400'}`;
+  document.getElementById('tab-signup').className = `flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${!isLogin?'text-white bg-blue-600':'text-slate-400'}`;
+}
+
+function selectRole(role) {
+  selectedRole = role;
+  document.querySelectorAll('.role-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.role === role);
+  });
+  // Show/hide ID fields
+  const sid = document.getElementById('reg-sid');
+  const eid = document.getElementById('reg-eid');
+  sid.classList.toggle('hidden', role !== 'student');
+  sid.placeholder = 'Student ID (e.g. CS2406) *';
+  eid.classList.toggle('hidden', role === 'student' || role === 'admin');
+  eid.placeholder = role === 'hod' ? 'Head of Dept Employee ID *' : 'Employee ID *';
+}
+
+function togglePwd(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function quickLogin(email, pass) {
+  document.getElementById('login-email').value = email;
+  document.getElementById('login-password').value = pass;
+  switchTab('login');
+  doLogin();
+}
+
+async function doLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl    = document.getElementById('login-error');
+  const btnText  = document.getElementById('login-btn-text');
+  const spinner  = document.getElementById('login-spinner');
+  errEl.classList.add('hidden');
+
+  if (!email || !password) { errEl.textContent='Email and password required'; errEl.classList.remove('hidden'); return; }
+
+  btnText.textContent = 'Signing in…'; spinner.classList.remove('hidden');
+  try {
+    const res  = await fetch(`${API}/api/auth/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || (data.errors?.[0]?.msg) || 'Login failed');
+
+    localStorage.setItem('fas_token', data.data.token);
+    localStorage.setItem('fas_user',  JSON.stringify(data.data));
+
+    // Redirect based on role
+    const role = data.data.role;
+    const dest = role === 'student' ? 'student-portal.html' : 'dashboard.html';
+    window.location.href = dest;
+  } catch(e) {
+    errEl.textContent = e.message; errEl.classList.remove('hidden');
+  } finally {
+    btnText.textContent = 'Sign In'; spinner.classList.add('hidden');
+  }
+}
+
+async function doRegister() {
+  const errEl   = document.getElementById('reg-error');
+  const btnText = document.getElementById('reg-btn-text');
+  const spinner = document.getElementById('reg-spinner');
+  errEl.classList.add('hidden');
+
+  const body = {
+    name:       document.getElementById('reg-name').value.trim(),
+    email:      document.getElementById('reg-email').value.trim(),
+    password:   document.getElementById('reg-password').value,
+    role:       selectedRole,
+    department: document.getElementById('reg-dept').value,
+    studentId:  document.getElementById('reg-sid').value.trim(),
+    employeeId: document.getElementById('reg-eid').value.trim(),
+  };
+
+  if (!body.name || !body.email || !body.password || !body.department)
+    { errEl.textContent='Please fill all required fields'; errEl.classList.remove('hidden'); return; }
+
+  btnText.textContent = 'Creating…'; spinner.classList.remove('hidden');
+  try {
+    const res  = await fetch(`${API}/api/auth/register`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || data.errors?.[0]?.msg || 'Registration failed');
+
+    localStorage.setItem('fas_token', data.data.token);
+    localStorage.setItem('fas_user',  JSON.stringify(data.data));
+    const dest = data.data.role === 'student' ? 'student-portal.html' : 'dashboard.html';
+    window.location.href = dest;
+  } catch(e) {
+    errEl.textContent = e.message; errEl.classList.remove('hidden');
+  } finally {
+    btnText.textContent = 'Create Account'; spinner.classList.add('hidden');
+  }
+}
+
+// Init role selection
+selectRole('student');
+
+// If already logged in, redirect
+const existingToken = localStorage.getItem('fas_token');
+const existingUser  = localStorage.getItem('fas_user');
+if (existingToken && existingUser) {
+  const user = JSON.parse(existingUser);
+  window.location.href = user.role === 'student' ? 'student-portal.html' : 'dashboard.html';
+}
+
+// Enter key on login
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const loginVisible = !document.getElementById('login-form').classList.contains('hidden');
+    if (loginVisible) doLogin(); else doRegister();
+  }
+});
+</script>
+</body>
+</html>

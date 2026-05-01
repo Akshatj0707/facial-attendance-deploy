@@ -1,5 +1,5 @@
 node_modules/
-data.json
-*.db
 .env
+*.db
+data.json
 .DS_Store

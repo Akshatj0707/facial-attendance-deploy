@@ -110,7 +110,7 @@
         }
         body { font-family: 'Public Sans', sans-serif; }
     </style>
-<script src="data.js"></script>
+<script src="auth.js"></script>
 </head>
 <body class="bg-background text-on-background flex h-screen overflow-hidden">
 <!-- SideNavBar (Shared Component) -->
@@ -314,54 +314,69 @@
 </main>
 </div>
 <script>
-let attFilters = { search:'', department:'all', status:'all', date:'' };
+Auth.require(['admin','hod','faculty']);
+Auth.fillNavbar();
 
-function loadAttendance() {
-  const { rows } = DB.getAttendance({...attFilters, limit:100});
-  const tbody = document.getElementById('att-table-body');
-  if (!tbody) return;
-  tbody.innerHTML = !rows.length
-    ? '<tr><td colspan="7" class="text-center py-8 text-slate-400">No records found.</td></tr>'
-    : rows.map((r,i) => {
-        const dt      = new Date(r.check_in);
-        const dateStr = dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-        const timeStr = dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-        const badge   = r.status==='Present'?'bg-emerald-100 text-emerald-700':r.status==='Late'?'bg-amber-100 text-amber-700':'bg-red-100 text-red-700';
-        return `<tr class="${i%2?'bg-slate-50/50':''} hover:bg-slate-50 transition-colors">
-          <td class="px-6 py-4"><div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">${r.avatar||'??'}</div>
-            <div><p class="font-bold text-slate-900 text-sm">${r.name||'—'}</p><p class="text-[11px] text-slate-500">${r.student_id||'—'}</p></div>
-          </div></td>
-          <td class="px-6 py-4 text-slate-600 text-sm">${r.department||'—'}</td>
-          <td class="px-6 py-4 text-slate-600 text-sm">${dateStr}</td>
-          <td class="px-6 py-4 text-slate-600 text-sm">${timeStr}</td>
-          <td class="px-6 py-4 text-slate-600 text-sm">${r.terminal||'—'}</td>
-          <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-[11px] font-semibold ${badge}">${r.status}</span></td>
-          <td class="px-6 py-4 text-right">
-            <button onclick="delRecord(${r.id})" class="text-slate-400 hover:text-red-500">
-              <span class="material-symbols-outlined text-sm">delete</span>
-            </button>
-          </td>
-        </tr>`;
-      }).join('');
+let filters = { search:'', department:'all', status:'all', date:'' };
+
+async function loadAttendance() {
+  const params = new URLSearchParams({ limit:100 });
+  if (filters.search)     params.append('search',     filters.search);
+  if (filters.department !== 'all') params.append('department', filters.department);
+  if (filters.status     !== 'all') params.append('status',     filters.status);
+  if (filters.date)       params.append('date',       filters.date);
+
+  try {
+    const res  = await Auth.fetch(`/api/attendance?${params}`);
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    const { rows, total } = json.data;
+    const tbody = document.getElementById('att-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = !rows.length
+      ? '<tr><td colspan="7" class="text-center py-8 text-slate-400">No records found.</td></tr>'
+      : rows.map((r,i) => {
+          const s   = r.student || {};
+          const dt  = new Date(r.checkIn);
+          const ds  = dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+          const ts  = dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+          const badge = r.status==='Present'?'bg-emerald-100 text-emerald-700':
+                        r.status==='Late'   ?'bg-amber-100 text-amber-700':'bg-red-100 text-red-700';
+          const user = Auth.getUser();
+          const canDel = user.role==='admin'||user.role==='hod';
+          return `<tr class="${i%2?'bg-slate-50/50':''} hover:bg-slate-50">
+            <td class="px-6 py-4"><div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">${s.avatar||'??'}</div>
+              <div><p class="font-bold text-slate-900 text-sm">${s.name||'—'}</p><p class="text-[11px] text-slate-500">${s.studentId||'—'}</p></div>
+            </div></td>
+            <td class="px-6 py-4 text-slate-600 text-sm">${s.department||'—'}</td>
+            <td class="px-6 py-4 text-slate-600 text-sm">${ds}</td>
+            <td class="px-6 py-4 text-slate-600 text-sm">${ts}</td>
+            <td class="px-6 py-4 text-slate-600 text-sm">${r.terminal||'—'}</td>
+            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-[11px] font-semibold ${badge}">${r.status}</span></td>
+            <td class="px-6 py-4 text-right">
+              ${canDel ? `<button onclick="delRecord('${r._id}')" class="text-slate-400 hover:text-red-500 transition-colors">
+                <span class="material-symbols-outlined text-sm">delete</span></button>` : ''}
+            </td>
+          </tr>`;
+        }).join('');
+  } catch(e) { console.error(e); }
 }
 
-function delRecord(id) {
-  if (!confirm('Delete this record?')) return;
-  DB.deleteAttendance(id);
-  loadAttendance();
+async function delRecord(id) {
+  if (!confirm('Delete this attendance record?')) return;
+  const res = await Auth.fetch(`/api/attendance/${id}`, { method:'DELETE' });
+  if (res) loadAttendance();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   const si = document.getElementById('filter-search');
-  if (si) si.addEventListener('input', e => { attFilters.search=e.target.value; loadAttendance(); });
-
-  // Wire filter selects if present
+  if (si) si.addEventListener('input', e => { filters.search=e.target.value; loadAttendance(); });
   document.querySelectorAll('select').forEach(sel => {
     sel.addEventListener('change', e => {
-      const name = sel.getAttribute('name') || '';
-      if (name === 'department') { attFilters.department = e.target.value; loadAttendance(); }
-      if (name === 'status')     { attFilters.status     = e.target.value; loadAttendance(); }
+      const name = sel.getAttribute('name')||'';
+      if (name==='department') { filters.department=e.target.value; loadAttendance(); }
+      if (name==='status')     { filters.status=e.target.value;     loadAttendance(); }
     });
   });
   loadAttendance();

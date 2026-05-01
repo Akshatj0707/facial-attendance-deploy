@@ -131,7 +131,7 @@
             border-width: 3px;
         }
     </style>
-<script src="data.js"></script>
+<script src="auth.js"></script>
 </head>
 <body class="bg-background font-body-md text-on-surface antialiased">
 <!-- TopNavBar -->
@@ -374,9 +374,11 @@
 <!-- Floating Action Button Contextual (Only if relevant, hidden per instructions on Detail screens usually, but here as session control it stays for Dashboard/Home context) -->
 <!-- The manual says only render if purpose aligns perfectly. Here, this is the recognition screen, so a "Manual Entry" FAB might fit if the primary action isn't already handled. Since we have controls in the feed, we skip for UI purity. -->
 <script>
+Auth.require(['admin','hod','faculty']);
+Auth.fillNavbar();
+
 let stream=null, detectionLoop=null, faceModelsLoaded=false, capturing=false;
 let frameCount=0, lastFpsTime=Date.now();
-
 const $ = id => document.getElementById(id);
 
 function updateClock() {
@@ -398,7 +400,9 @@ async function startCamera() {
   try {
     stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
     const video=$('cam-video');
-    video.srcObject=stream; await new Promise(r=>video.addEventListener('loadedmetadata',r,{once:true})); video.play();
+    video.srcObject=stream;
+    await new Promise(r=>video.addEventListener('loadedmetadata',r,{once:true}));
+    video.play();
     $('cam-permission')?.classList.add('hidden');
     video.classList.remove('hidden');
     $('cam-canvas')?.classList.remove('hidden');
@@ -406,7 +410,7 @@ async function startCamera() {
     $('manual-capture-btn')?.classList.remove('hidden');
     setStatus('online','Camera Active');
     const cv=$('cam-canvas');
-    const sync=()=>{ if(cv){cv.width=video.videoWidth||640;cv.height=video.videoHeight||480;} const r=$('cam-res'); if(r)r.textContent=`RESOLUTION: ${cv.width}×${cv.height}`; };
+    const sync=()=>{ if(cv){cv.width=video.videoWidth||640;cv.height=video.videoHeight||480;} const r=$('cam-res'); if(r)r.textContent=`RESOLUTION: ${cv?.width}×${cv?.height}`; };
     sync(); video.addEventListener('resize',sync);
     if(!faceModelsLoaded) await loadModels();
     startDetectionLoop();
@@ -427,14 +431,13 @@ function stopCamera() {
   $('detect-progress-wrap')?.classList.add('hidden');
   setStatus('off','Camera Off');
   const tr=$('cam-tracking'); if(tr)tr.textContent='TRACKING: STANDBY';
-  const fp=$('cam-fps'); if(fp)fp.textContent='FPS: —';
 }
 
 function startDetectionLoop() {
   const video=$('cam-video'), canvas=$('cam-canvas');
   if(!canvas||!video) return;
   const ctx=canvas.getContext('2d');
-  let hold=0, prog=0;
+  let prog=0, hold=0;
   async function loop() {
     if(!video.paused && video.readyState>=2) {
       frameCount++; const now=Date.now();
@@ -447,7 +450,7 @@ function startDetectionLoop() {
           else if(hold>0){hold--;}
           else{prog=Math.max(0,prog-10);const t=$('cam-tracking');if(t)t.textContent='TRACKING: SCANNING';}
         } catch(e){}
-      } else { prog=75+Math.sin(Date.now()/400)*15; }
+      } else { prog=60+Math.sin(Date.now()/400)*20; }
       const dw=$('detect-progress-wrap'),db=$('detect-progress-bar');
       if(prog>20){dw?.classList.remove('hidden');if(db)db.style.width=prog+'%';}
       else dw?.classList.add('hidden');
@@ -477,48 +480,69 @@ async function captureAndRecognize() {
   capturing=true;
   const flash=$('capture-flash');
   if(flash){flash.style.opacity='0.85';setTimeout(()=>flash.style.opacity='0',120);}
-  const rs=$('rec-status'); if(rs){rs.textContent='Scanning…';rs.className='text-amber-400 font-bold text-xl animate-pulse';}
+  const rs=$('rec-status');
+  if(rs){rs.textContent='Scanning…';rs.className='text-amber-400 font-bold text-xl animate-pulse';}
   const ra=$('rec-avatar'); if(ra) ra.textContent='⟳';
   await new Promise(r=>setTimeout(r,400));
-  const result = DB.recognize();
-  if(result) displayResult(result);
-  loadRecentLogs();
+  try {
+    const res  = await Auth.fetch('/api/attendance/recognize', { method:'POST', body: JSON.stringify({}) });
+    const json = await res.json();
+    if(!json.success) throw new Error(json.error);
+    displayResult(json.data);
+    loadRecentLogs();
+  } catch(e) {
+    if(rs){rs.textContent='✗ Error: '+e.message;rs.className='text-red-500 font-bold text-lg';}
+  }
   capturing=false;
 }
 
 function displayResult(data) {
   const late=data.status==='Late';
+  const s=data.student||{};
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-  set('rec-avatar',data.student.avatar);
-  set('rec-name',data.student.name);
-  set('rec-id',data.student.student_id);
-  set('rec-dept',data.student.department);
-  set('rec-conf',Math.round(data.confidence*100)+'% confidence');
+  set('rec-avatar',  s.avatar||'??');
+  set('rec-name',    s.name||'—');
+  set('rec-id',      s.studentId||'—');
+  set('rec-dept',    s.department||'—');
+  set('rec-conf',    Math.round((data.confidence||0)*100)+'% confidence');
   const rs=$('rec-status');
   if(rs){rs.textContent=late?'⚠ Late Arrival':'✓ Verified';rs.className=`font-bold text-2xl tracking-tight ${late?'text-amber-500':'text-emerald-500'}`;}
   const rb=$('rec-badge');
   if(rb){rb.textContent=data.status;rb.className=`px-4 py-1.5 rounded-full text-sm font-bold ${late?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700'}`;}
 }
 
-function loadRecentLogs() {
-  const {rows}=DB.getAttendance({limit:6});
-  const el=document.querySelector('.flex-1.overflow-y-auto.space-y-sm');
-  if(!el) return;
-  el.innerHTML=rows.map(r=>{
-    const t=new Date(r.check_in).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-    const ok=r.status==='Present';
-    return `<div class="bg-white p-sm rounded border border-slate-200 flex items-center gap-sm">
-      <div class="w-10 h-10 bg-slate-200 rounded flex-shrink-0 flex items-center justify-center font-bold text-slate-600 text-xs">${r.avatar||'??'}</div>
-      <div class="flex-1 min-w-0"><p class="text-xs font-bold text-slate-900 truncate">${r.name||'—'}</p><p class="text-[10px] text-slate-500">${t} • ${r.course||'—'}</p></div>
-      <div class="px-2 py-1 ${ok?'bg-green-50 text-green-700':'bg-amber-50 text-amber-700'} text-[10px] font-bold rounded">${ok?'OK':'LATE'}</div>
-    </div>`;
-  }).join('');
+async function loadRecentLogs() {
+  try {
+    const res  = await Auth.fetch('/api/attendance?limit=6');
+    const json = await res.json();
+    if(!json.success) return;
+    const el=document.querySelector('.flex-1.overflow-y-auto.space-y-sm');
+    if(!el) return;
+    el.innerHTML=(json.data.rows||[]).map(r=>{
+      const s=r.student||{};
+      const t=new Date(r.checkIn).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+      const ok=r.status==='Present';
+      return `<div class="bg-white p-sm rounded border border-slate-200 flex items-center gap-sm">
+        <div class="w-10 h-10 bg-slate-200 rounded flex-shrink-0 flex items-center justify-center font-bold text-slate-600 text-xs">${s.avatar||'??'}</div>
+        <div class="flex-1 min-w-0"><p class="text-xs font-bold text-slate-900 truncate">${s.name||'—'}</p><p class="text-[10px] text-slate-500">${t} • ${s.course||'—'}</p></div>
+        <div class="px-2 py-1 ${ok?'bg-green-50 text-green-700':'bg-amber-50 text-amber-700'} text-[10px] font-bold rounded">${ok?'OK':'LATE'}</div>
+      </div>`;
+    }).join('');
+  } catch(e){}
 }
 
-function loadTerminals() {
+async function loadTerminals() {
   const el=document.getElementById('terminal-list');
   if(!el) return;
-  el.innerHTML=DB.getTerminals().map(t=>`
+  const terminals=[
+    {name:'Terminal North-A',location:'Main Building - North Entrance',status:'Online'},
+    {name:'Terminal North-B',location:'Main Building - North Exit',status:'Online'},
+    {name:'Terminal West-C', location:'Science Block - West Wing',status:'Online'},
+    {name:'Terminal East-B', location:'Arts Block - East Entrance',status:'Online'},
+    {name:'Terminal South-D',location:'Sports Complex - South Gate',status:'Offline'},
+    {name:'Terminal Lab-E',  location:'Computer Lab - Block C',status:'Online'},
+  ];
+  el.innerHTML=terminals.map(t=>`
     <div class="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg">
       <div><p class="text-sm font-bold text-slate-900">${t.name}</p><p class="text-xs text-slate-500">${t.location}</p></div>
       <span class="px-2 py-1 text-[11px] font-semibold rounded-full ${t.status==='Online'?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'}">${t.status}</span>

@@ -1,26 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta http-equiv="refresh" content="0; url=dashboard.html"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>College Attendance System</title>
-  <script>window.location.replace("dashboard.html");</script>
-  <style>
-    body { font-family: 'Public Sans', sans-serif; background: #f7f9fb; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-    .loader { text-align: center; color: #0F172A; }
-    .logo { width: 48px; height: 48px; background: #131b2e; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
-    h2 { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
-    p { font-size: 14px; color: #64748b; }
-  </style>
+<meta charset="utf-8"/>
+<meta http-equiv="refresh" content="0; url=login.html"/>
+<title>College Attendance System</title>
+<script>
+  const token = localStorage.getItem('fas_token');
+  const user  = localStorage.getItem('fas_user');
+  if (token && user) {
+    const u = JSON.parse(user);
+    window.location.href = u.role === 'student' ? 'student-portal.html' : 'dashboard.html';
+  } else {
+    window.location.href = 'login.html';
+  }
+</script>
 </head>
-<body>
-  <div class="loader">
-    <div class="logo">
-      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="white" viewBox="0 96 960 960"><path d="M480 551q-74 0-127-53t-53-127q0-74 53-127t127-53q74 0 127 53t53 127q0 74-53 127t-127 53ZM160 896v-94q0-38 19-65t49-41q67-30 138.5-45T480 636q70 0 141.5 15T760 696q31 14 50.5 41t19.5 65v94H160Z"/></svg>
-    </div>
-    <h2>College Attendance System</h2>
-    <p>Loading Admin Portal…</p>
-  </div>
-</body>
+<body></body>
 </html>

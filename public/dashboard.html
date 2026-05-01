@@ -112,7 +112,7 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     </style>
-<script src="data.js"></script>
+<script src="auth.js"></script>
 </head>
 <body class="bg-background font-body-md text-on-surface">
 <div class="flex min-h-screen">
@@ -146,8 +146,7 @@
 </a>
 </nav>
 <div class="mt-auto px-6 border-t border-slate-200 pt-6">
-<a class="text-slate-600 py-3 flex items-center gap-3 hover:text-error transition-all" href="#">
-<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<a class="text-slate-600 py-3 flex items-center gap-3 hover:text-error transition-all" data-logout href="#"><span class="material-symbols-outlined" data-icon="logout">logout</span>
 <span class="font-label-md text-label-md">Log Out</span>
 </a>
 </div>
@@ -363,90 +362,105 @@
 </main>
 </div>
 <script>
-function loadDashboard() {
-  const data = DB.getStats();
-  const set = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
-  
-  set('kpi-total',   data.totalStudents.toLocaleString());
-  set('kpi-present', data.presentToday.toLocaleString());
-  set('kpi-late',    data.lateToday);
-  set('kpi-terminals', data.onlineTerminals + ' Active Terminals');
-  
-  const pct = data.totalStudents ? Math.round(data.presentToday/data.totalStudents*100) : 0;
-  set('kpi-present-pct', pct + '% of total enrollment');
-  const bar = document.getElementById('kpi-present-bar');
-  if (bar) bar.style.width = pct + '%';
+// Auth guard
+Auth.require(['admin','hod','faculty']);
+Auth.fillNavbar();
 
-  // Trend chart
-  const chartEl = document.getElementById('trend-chart');
-  if (chartEl) {
-    if (data.hourlyTrend.length > 0) {
-      const maxC = Math.max(...data.hourlyTrend.map(h=>h.count), 1);
-      chartEl.innerHTML = data.hourlyTrend.map(h => {
-        const hp = Math.round(h.count/maxC*100);
-        return `<div class="flex flex-col items-center flex-1 gap-1">
-          <span class="text-[9px] text-slate-400 font-bold">${h.count}</span>
-          <div class="w-full bg-slate-900 rounded-t-sm" style="height:${hp}%"></div>
-          <span class="text-[9px] text-slate-400 font-bold">${h.hour}:00</span>
-        </div>`;
-      }).join('');
-    } else {
-      chartEl.innerHTML = '<p class="text-slate-400 text-sm m-auto">No check-ins today yet.</p>';
-    }
-  }
+// Wire logout button in sidebar
+document.querySelectorAll('[data-logout]').forEach(el => el.addEventListener('click', () => Auth.logout()));
 
-  // Recent logs
-  const logsEl = document.getElementById('recent-logs');
-  if (logsEl) {
-    logsEl.innerHTML = data.recentLogs.length === 0
-      ? '<p class="text-slate-400 text-sm text-center py-4">No activity today.</p>'
-      : data.recentLogs.map(log => {
-          const time = new Date(log.check_in).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-          const ok = log.status === 'Present';
-          return `<div class="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-            <div class="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 text-sm relative">
-              ${log.avatar||'??'}
-              <div class="absolute -bottom-1 -right-1 w-5 h-5 ${ok?'bg-emerald-500':'bg-amber-500'} border-2 border-white rounded-full flex items-center justify-center">
-                <span class="material-symbols-outlined text-[10px] text-white" style="font-variation-settings:'wght' 700;">${ok?'check':'schedule'}</span>
-              </div>
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-bold text-slate-900 truncate">${log.name||'—'}</p>
-              <p class="text-[11px] text-slate-500">${log.terminal||'Terminal'} • ${log.course||'—'}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-[11px] font-bold text-slate-900">${time}</p>
-              <p class="text-[10px] ${ok?'text-emerald-600':'text-amber-600'} font-medium">${log.status}</p>
-            </div>
+async function loadDashboard() {
+  try {
+    const res  = await Auth.fetch('/api/stats');
+    if (!res) return;
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    const data = json.data;
+
+    const set = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+    set('kpi-total',    data.totalStudents.toLocaleString());
+    set('kpi-present',  data.presentToday.toLocaleString());
+    set('kpi-late',     data.lateToday);
+    set('kpi-terminals',data.onlineTerminals + ' Active Terminals');
+
+    const pct = data.totalStudents ? Math.round(data.presentToday/data.totalStudents*100) : 0;
+    set('kpi-present-pct', pct + '% of total enrollment');
+    const bar = document.getElementById('kpi-present-bar');
+    if (bar) bar.style.width = pct + '%';
+
+    // Trend chart
+    const chartEl = document.getElementById('trend-chart');
+    if (chartEl) {
+      if (data.hourlyTrend.length > 0) {
+        const maxC = Math.max(...data.hourlyTrend.map(h=>h.count), 1);
+        chartEl.innerHTML = data.hourlyTrend.map(h => {
+          const hp = Math.round(h.count/maxC*100);
+          return `<div class="flex flex-col items-center flex-1 gap-1">
+            <span class="text-[9px] text-slate-400 font-bold">${h.count}</span>
+            <div class="w-full bg-slate-900 rounded-t-sm" style="height:${hp}%"></div>
+            <span class="text-[9px] text-slate-400 font-bold">${h.hour}:00</span>
           </div>`;
         }).join('');
-  }
+      } else {
+        chartEl.innerHTML = '<p class="text-slate-400 text-sm m-auto">No check-ins today yet.</p>';
+      }
+    }
 
-  // Dept table
-  const deptEl = document.getElementById('dept-table-body');
-  if (deptEl) {
-    deptEl.innerHTML = data.departments.map((d,i) => {
-      const absent = d.registered - d.present;
-      const rate   = d.registered ? (d.present/d.registered*100).toFixed(1) : 0;
-      const color  = rate >= 85 ? 'bg-emerald-500' : 'bg-amber-500';
-      return `<tr class="${i%2?'bg-slate-50/30':''} hover:bg-slate-50 transition-colors">
-        <td class="px-6 py-4 font-bold text-slate-900">${d.department}</td>
-        <td class="px-6 py-4">${d.registered}</td>
-        <td class="px-6 py-4 text-emerald-600 font-bold">${d.present}</td>
-        <td class="px-6 py-4 text-red-600">${absent}</td>
-        <td class="px-6 py-4">
-          <div class="flex items-center gap-2">
-            <div class="w-24 bg-slate-100 h-1.5 rounded-full overflow-hidden">
-              <div class="${color} h-full" style="width:${rate}%"></div>
+    // Recent logs
+    const logsEl = document.getElementById('recent-logs');
+    if (logsEl) {
+      logsEl.innerHTML = !data.recentLogs.length
+        ? '<p class="text-slate-400 text-sm text-center py-4">No recent activity.</p>'
+        : data.recentLogs.map(log => {
+            const time = new Date(log.checkIn).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+            const ok   = log.status === 'Present';
+            const s    = log.student || {};
+            return `<div class="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+              <div class="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 text-sm relative">
+                ${s.avatar||'??'}
+                <div class="absolute -bottom-1 -right-1 w-5 h-5 ${ok?'bg-emerald-500':'bg-amber-500'} border-2 border-white rounded-full flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[10px] text-white" style="font-variation-settings:'wght' 700;">${ok?'check':'schedule'}</span>
+                </div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-slate-900 truncate">${s.name||'—'}</p>
+                <p class="text-[11px] text-slate-500">${log.terminal||'Terminal'} • ${s.course||'—'}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-[11px] font-bold text-slate-900">${time}</p>
+                <p class="text-[10px] ${ok?'text-emerald-600':'text-amber-600'} font-medium">${log.status}</p>
+              </div>
+            </div>`;
+          }).join('');
+    }
+
+    // Dept table
+    const deptEl = document.getElementById('dept-table-body');
+    if (deptEl) {
+      deptEl.innerHTML = data.departments.map((d,i) => {
+        const absent = d.registered - d.present;
+        const rate   = d.registered ? (d.present/d.registered*100).toFixed(1) : 0;
+        const color  = rate >= 85 ? 'bg-emerald-500' : 'bg-amber-500';
+        return `<tr class="${i%2?'bg-slate-50/30':''} hover:bg-slate-50">
+          <td class="px-6 py-4 font-bold text-slate-900">${d.department}</td>
+          <td class="px-6 py-4">${d.registered}</td>
+          <td class="px-6 py-4 text-emerald-600 font-bold">${d.present}</td>
+          <td class="px-6 py-4 text-red-600">${absent}</td>
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-2">
+              <div class="w-24 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div class="${color} h-full" style="width:${rate}%"></div>
+              </div>
+              <span class="font-bold">${rate}%</span>
             </div>
-            <span class="font-bold">${rate}%</span>
-          </div>
-        </td>
-        <td class="px-6 py-4"></td>
-      </tr>`;
-    }).join('');
-  }
+          </td>
+          <td class="px-6 py-4"></td>
+        </tr>`;
+      }).join('');
+    }
+  } catch(e) { console.error('Dashboard error:', e); }
 }
+
 loadDashboard();
 setInterval(loadDashboard, 30000);
 </script>
