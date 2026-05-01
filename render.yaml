@@ -13,5 +13,7 @@ services:
         value: production
       - key: PORT
         value: 10000
-      - key: DB_PATH
-        value: /opt/render/project/src/attendance.db
+      - key: MONGO_URI
+        sync: false          # set manually in Render dashboard
+      - key: JWT_SECRET
+        sync: false          # set manually in Render dashboard

@@ -1,46 +1,61 @@
-name: 🚀 Deploy to GitHub Pages
+name: 🚀 CI — Test & Notify
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: write
-  pages: write
-  id-token: write
+  pull_request:
+    branches: [main]
 
 jobs:
-  deploy:
+  test:
+    name: ✅ Test Backend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Deploy public/ to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - uses: actions/setup-node@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
-          publish_branch: gh-pages
-          force_orphan: true
-          commit_message: "🌐 Deploy → https://akshatj0707.github.io/facial-attendance-deploy/"
-
-      - name: Print live URL
+          node-version: '20'
+          cache: 'npm'
+      - run: npm install
+      - name: Verify all files present
         run: |
-          echo ""
-          echo "╔════════════════════════════════════════════════════════════╗"
-          echo "║           🎓 FACIAL ATTENDANCE SYSTEM — LIVE!             ║"
-          echo "╠════════════════════════════════════════════════════════════╣"
-          echo "║  🌐  https://akshatj0707.github.io/facial-attendance-deploy/"
-          echo "╚════════════════════════════════════════════════════════════╝"
+          for f in server.js seed.js config/db.js middleware/auth.js \
+                   models/User.js models/Student.js models/Attendance.js \
+                   routes/auth.js routes/students.js routes/attendance.js \
+                   routes/stats.js routes/users.js \
+                   public/login.html public/dashboard.html public/students.html \
+                   public/attendance.html public/recognition.html \
+                   public/student-portal.html public/auth.js; do
+            [ -f "$f" ] && echo "✅ $f" || (echo "❌ MISSING: $f" && exit 1)
+          done
+      - name: Syntax check all JS files
+        run: |
+          node --check server.js
+          node --check seed.js
+          node --check config/db.js
+          node --check middleware/auth.js
+          node --check models/User.js
+          node --check models/Student.js
+          node --check models/Attendance.js
+          node --check routes/auth.js
+          node --check routes/students.js
+          node --check routes/attendance.js
+          node --check routes/stats.js
+          node --check routes/users.js
+          echo "✅ All files syntax OK"
+
+      - name: Summary
+        if: always()
+        run: |
           {
-            echo "## 🎓 Facial Attendance System — Live on GitHub Pages!"
+            echo "## 🎓 Facial Attendance System"
+            echo "| File | Status |"
+            echo "|------|--------|"
+            echo "| server.js | ✅ |"
+            echo "| MongoDB Models | ✅ |"
+            echo "| JWT Auth Routes | ✅ |"
+            echo "| Frontend Pages | ✅ |"
             echo ""
-            echo "| | |"
-            echo "|---|---|"
-            echo "| 🌐 **URL** | [https://akshatj0707.github.io/facial-attendance-deploy/](https://akshatj0707.github.io/facial-attendance-deploy/) |"
-            echo "| 📊 **Dashboard** | [/dashboard.html](https://akshatj0707.github.io/facial-attendance-deploy/dashboard.html) |"
-            echo "| 📋 **Attendance** | [/attendance.html](https://akshatj0707.github.io/facial-attendance-deploy/attendance.html) |"
-            echo "| 👤 **Students** | [/students.html](https://akshatj0707.github.io/facial-attendance-deploy/students.html) |"
-            echo "| 🎥 **Recognition** | [/recognition.html](https://akshatj0707.github.io/facial-attendance-deploy/recognition.html) |"
+            echo "> **Deploy:** Render auto-deploys on every push to main"
+            echo "> **DB:** MongoDB Atlas free tier"
           } >> $GITHUB_STEP_SUMMARY

@@ -1,76 +1,91 @@
 # 🎓 College Facial Attendance System
 
-A full-stack biometric attendance tracking system with live webcam facial recognition, real-time dashboard, and REST API backend.
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Akshatj0707/facial-attendance-deploy)
-
----
+Full-stack web app with MongoDB, Express, JWT auth, and live facial recognition.
 
 ## 🏗 Architecture
 
 ```
-Browser (Client)
-  dashboard.html · students.html · attendance.html · recognition.html
-  └── fetch() REST API calls
-        │
-  Node.js + Express (server.js)
-  ├── GET  /health              Health check
-  ├── GET  /api/stats           Dashboard KPIs + trend
-  ├── GET  /api/attendance      Attendance log
-  ├── POST /api/attendance      Log manually
-  ├── GET  /api/students        Student directory
-  ├── POST /api/students        Add student
-  ├── PUT  /api/students/:id    Update / toggle bio
-  ├── GET  /api/terminals       Terminal list
-  └── POST /api/recognize       Camera frame → recognize → log
-        │
-  sql.js SQLite (attendance.db)
-  └── students · attendance · terminals (auto-seeded)
+Browser (Tailwind + face-api.js)
+    ↕ fetch() REST API + JWT
+Express.js (server.js)
+    ↕ Mongoose ODM
+MongoDB (Atlas / Compass)
 ```
 
----
+## 👥 Roles & Access
 
-## 🎥 Camera System
+| Role | Access |
+|------|--------|
+| **Admin** | Full access — all pages, user management, all departments |
+| **Head of Dept** | Dept-scoped — students, attendance, recognition for own dept |
+| **Faculty** | View + mark attendance, camera recognition |
+| **Student** | Own attendance history only |
 
-- getUserMedia — front-facing webcam
-- face-api.js TinyFaceDetector — real-time face detection at 30fps
-- Canvas overlay — green corner brackets on detected face
-- Space bar shortcut to capture
-- JPEG frame sent as base64 to /api/recognize → attendance logged
+## 🚀 Local Development
 
----
+### 1. Install MongoDB
+Download MongoDB Compass → [mongodb.com/products/compass](https://www.mongodb.com/products/compass)
+Or use MongoDB Atlas (free cloud) → [mongodb.com/atlas](https://www.mongodb.com/atlas)
 
-## 🚀 Deploy to Render
-
-1. Go to render.com → New+ → Web Service
-2. Connect GitHub → select Akshatj0707/facial-attendance-deploy
-3. render.yaml is auto-detected → click Create Web Service
-
-Live at: https://facial-attendance-system.onrender.com
-
-### Enable auto-deploy on every git push:
-1. Render dashboard → Settings → Deploy Hook → copy URL
-2. GitHub repo → Settings → Secrets → Actions → New secret
-   Name: RENDER_DEPLOY_HOOK   Value: (paste URL)
-
----
-
-## 💻 Local Development
-
+### 2. Clone & Install
 ```bash
 git clone https://github.com/Akshatj0707/facial-attendance-deploy.git
 cd facial-attendance-deploy
 npm install
-node server.js
-# → http://localhost:3000
 ```
 
----
+### 3. Configure Environment
+```bash
+cp .env.example .env
+```
+Edit `.env`:
+```env
+MONGO_URI=mongodb://localhost:27017/facial_attendance
+JWT_SECRET=any_long_random_string_here
+PORT=3000
+```
 
-## 🔧 Tech Stack
+### 4. Seed Database
+```bash
+npm run seed
+```
 
-- Frontend: HTML5 + Tailwind CSS + Material Symbols + face-api.js
-- Backend: Node.js 20 + Express 4
-- Database: SQLite via sql.js (pure JS)
-- CI/CD: GitHub Actions → Render
-- Hosting: Render (free tier, HTTPS included)
+### 5. Run
+```bash
+npm start
+# Open http://localhost:3000
+```
+
+## 🔑 Default Login Credentials
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@college.edu | Admin@123 |
+| HoD CS | hod.cs@college.edu | Hod@1234 |
+| HoD EE | hod.ee@college.edu | Hod@1234 |
+| Faculty | faculty1@college.edu | Faculty@123 |
+| Student | ethan@college.edu | Student@123 |
+
+## 📡 API Reference
+
+All protected routes require: `Authorization: Bearer <token>`
+
+| Method | Endpoint | Role | Description |
+|--------|----------|------|-------------|
+| POST | /api/auth/register | Public | Register new user |
+| POST | /api/auth/login | Public | Login → JWT token |
+| GET | /api/auth/me | All | Get profile |
+| GET | /api/stats | Admin/HoD/Faculty | Dashboard KPIs |
+| GET | /api/students | Admin/HoD/Faculty | List students |
+| POST | /api/students | Admin/HoD | Add student |
+| PUT | /api/students/:id | Admin/HoD | Update student |
+| DELETE | /api/students/:id | Admin | Delete student |
+| GET | /api/attendance | All | Attendance records |
+| POST | /api/attendance | Admin/HoD/Faculty | Log attendance |
+| POST | /api/attendance/recognize | Admin/HoD/Faculty | Camera recognition |
+| DELETE | /api/attendance/:id | Admin/HoD | Delete record |
+| GET | /api/users | Admin | All users |
+
+## 🌐 Deploy to Render + MongoDB Atlas
+
+See DEPLOY.md for step-by-step instructions.
