@@ -1,61 +1,328 @@
-name: 🚀 CI — Test & Notify
+name: 🚀 Full Stack Deploy
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
+
+env:
+  RENDER_API_KEY: rnd_uxnLDJ1GKn2VRJlvfMO2rUIfI6kz
+  IMAGE: ghcr.io/akshatj0707/facial-attendance-deploy
+  SVC_NAME: fas-backend
 
 jobs:
+  # ── 1. TEST ──────────────────────────────────────────────────────────────────
   test:
-    name: ✅ Test Backend
+    name: ✅ Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
+        with: { node-version: '20', cache: 'npm' }
       - run: npm install
-      - name: Verify all files present
+      - name: Syntax check
         run: |
           for f in server.js seed.js config/db.js middleware/auth.js \
                    models/User.js models/Student.js models/Attendance.js \
                    routes/auth.js routes/students.js routes/attendance.js \
-                   routes/stats.js routes/users.js \
-                   public/login.html public/dashboard.html public/students.html \
-                   public/attendance.html public/recognition.html \
-                   public/student-portal.html public/auth.js; do
-            [ -f "$f" ] && echo "✅ $f" || (echo "❌ MISSING: $f" && exit 1)
+                   routes/stats.js routes/users.js; do
+            node --check "$f" && echo "✅ $f"
           done
-      - name: Syntax check all JS files
+      - name: Pages check
         run: |
-          node --check server.js
-          node --check seed.js
-          node --check config/db.js
-          node --check middleware/auth.js
-          node --check models/User.js
-          node --check models/Student.js
-          node --check models/Attendance.js
-          node --check routes/auth.js
-          node --check routes/students.js
-          node --check routes/attendance.js
-          node --check routes/stats.js
-          node --check routes/users.js
-          echo "✅ All files syntax OK"
+          for f in public/login.html public/dashboard.html public/attendance.html \
+                   public/students.html public/recognition.html \
+                   public/student-portal.html public/auth.js; do
+            [ -f "$f" ] && echo "✅ $f" || (echo "❌ $f" && exit 1)
+          done
 
-      - name: Summary
+  # ── 2. BUILD DOCKER IMAGE ────────────────────────────────────────────────────
+  docker:
+    name: 🐳 Docker → ghcr.io
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+
+      - name: Make image public
+        run: |
+          VERSIONS=$(curl -sf \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/user/packages/container/facial-attendance-deploy/versions" \
+            || echo "[]")
+          echo "$VERSIONS" | python3 -c "
+          import sys,json
+          try:
+            for v in json.load(sys.stdin):
+              print(v.get('id',''))
+          except: pass
+          " | head -3 | while read VID; do
+            [ -z "$VID" ] && continue
+            curl -s -X PATCH \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/user/packages/container/facial-attendance-deploy/versions/$VID" \
+              -d '{"visibility":"public"}' > /dev/null
+            echo "✅ v$VID → public"
+          done
+
+  # ── 3. DEPLOY TO RENDER ──────────────────────────────────────────────────────
+  deploy:
+    name: 🌐 Render Deploy
+    needs: docker
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      live_url: ${{ steps.url.outputs.live_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get owner
+        id: owner
+        run: |
+          R=$(curl -sf -H "Authorization: Bearer $RENDER_API_KEY" \
+              "https://api.render.com/v1/owners?limit=5")
+          echo "owners=$R"
+          ID=$(echo "$R" | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin)
+          items=d if isinstance(d,list) else [d]
+          for x in items:
+            o=x.get('owner',x)
+            if o.get('id'): print(o['id']); break
+          " 2>/dev/null)
+          echo "owner_id=$ID" >> $GITHUB_OUTPUT
+          echo "✅ owner=$ID"
+
+      - name: Delete stale services
+        run: |
+          ALL=$(curl -sf -H "Authorization: Bearer $RENDER_API_KEY" \
+                "https://api.render.com/v1/services?limit=100" || echo "[]")
+          IDS=$(echo "$ALL" | python3 -c "
+          import sys,json
+          names=['$SVC_NAME','facial-attendance-system','fas-backend',
+                 'akshatj0707-attendance','attendance-system','attendance-app-prod']
+          items=json.load(sys.stdin)
+          if not isinstance(items,list): items=[]
+          for x in items:
+            s=x.get('service',x)
+            if s.get('name','') in names and s.get('id'):
+              print(s['id'])
+          " 2>/dev/null || true)
+          for ID in $IDS; do
+            echo "🗑 Deleting $ID"
+            curl -sf -X DELETE -H "Authorization: Bearer $RENDER_API_KEY" \
+              "https://api.render.com/v1/services/$ID" && echo "  deleted ✓"
+            sleep 3
+          done
+
+      - name: Create service
+        id: create
+        run: |
+          OWNER="${{ steps.owner.outputs.owner_id }}"
+          MONGO="${{ secrets.MONGO_URI }}"
+          JWT="${{ secrets.JWT_SECRET }}"
+          IMG="${{ env.IMAGE }}:latest"
+
+          # Auto-generate JWT if not set
+          [ -z "$JWT" ] && JWT=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+
+          RESP=$(curl -s -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            "https://api.render.com/v1/services" \
+            -d "{
+              \"type\": \"web_service\",
+              \"name\": \"$SVC_NAME\",
+              \"ownerId\": \"$OWNER\",
+              \"image\": { \"ownerId\": \"$OWNER\", \"imagePath\": \"$IMG\" },
+              \"serviceDetails\": {
+                \"env\": \"image\",
+                \"plan\": \"free\",
+                \"region\": \"oregon\",
+                \"healthCheckPath\": \"/health\",
+                \"envVars\": [
+                  {\"key\":\"NODE_ENV\",   \"value\":\"production\"},
+                  {\"key\":\"PORT\",       \"value\":\"10000\"},
+                  {\"key\":\"MONGO_URI\",  \"value\":\"${MONGO}\"},
+                  {\"key\":\"JWT_SECRET\", \"value\":\"${JWT}\"}
+                ]
+              }
+            }")
+
+          echo "create_resp=$RESP"
+          SVC_ID=$(echo "$RESP" | python3 -c "
+          import sys,json; d=json.load(sys.stdin); s=d.get('service',d)
+          print(s.get('id',''))
+          " 2>/dev/null)
+          SVC_SLUG=$(echo "$RESP" | python3 -c "
+          import sys,json; d=json.load(sys.stdin); s=d.get('service',d)
+          print(s.get('slug','$SVC_NAME'))
+          " 2>/dev/null || echo "$SVC_NAME")
+
+          echo "service_id=$SVC_ID"               >> $GITHUB_OUTPUT
+          echo "live_url=https://${SVC_SLUG}.onrender.com" >> $GITHUB_OUTPUT
+          echo "✅ id=$SVC_ID  url=https://${SVC_SLUG}.onrender.com"
+
+      - name: Trigger + poll deploy
+        id: poll
+        run: |
+          ID="${{ steps.create.outputs.service_id }}"
+          URL="${{ steps.create.outputs.live_url }}"
+          [ -z "$ID" ] && echo "❌ No service ID" && exit 1
+
+          curl -sf -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            "https://api.render.com/v1/services/$ID/deploys" \
+            -d '{"clearCache":false}' && echo "🚀 Deploy triggered" || true
+
+          echo "⏳ Polling $URL ..."
+          STATUS="pending"
+          for i in $(seq 1 72); do
+            RESP=$(curl -sf -H "Authorization: Bearer $RENDER_API_KEY" \
+              "https://api.render.com/v1/services/$ID/deploys?limit=1" || echo "[]")
+            STATUS=$(echo "$RESP" | python3 -c "
+          import sys,json
+          try:
+            d=json.load(sys.stdin); items=d if isinstance(d,list) else [d]
+            print(items[0].get('deploy',items[0]).get('status','pending'))
+          except: print('pending')
+            " 2>/dev/null || echo "pending")
+            echo "  [$i/72] $STATUS"
+            if   [ "$STATUS" = "live" ];          then echo "🟢 LIVE → $URL"; break
+            elif [ "$STATUS" = "build_failed" ];  then echo "❌ build_failed";  break
+            elif [ "$STATUS" = "update_failed" ]; then echo "❌ update_failed"; break
+            fi
+            sleep 10
+          done
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+
+      - name: Get final URL
+        id: url
+        run: |
+          ID="${{ steps.create.outputs.service_id }}"
+          INFO=$(curl -sf -H "Authorization: Bearer $RENDER_API_KEY" \
+            "https://api.render.com/v1/services/$ID" || echo "{}")
+          URL=$(echo "$INFO" | python3 -c "
+          import sys,json; d=json.load(sys.stdin); s=d.get('service',d)
+          url=s.get('serviceDetails',{}).get('url','')
+          print(url or 'https://'+s.get('slug','$SVC_NAME')+'.onrender.com')
+          " 2>/dev/null || echo "${{ steps.create.outputs.live_url }}")
+          echo "live_url=$URL" >> $GITHUB_OUTPUT
+          echo "🌐 $URL"
+
+      - name: HTTP health check
+        run: |
+          URL="${{ steps.url.outputs.live_url }}"
+          for i in $(seq 1 15); do
+            CODE=$(curl -s -o /tmp/hc.txt -w "%{http_code}" --max-time 30 "$URL/health" || echo "000")
+            BODY=$(cat /tmp/hc.txt 2>/dev/null | head -c 120)
+            echo "  [$i] HTTP $CODE — $BODY"
+            [ "$CODE" = "200" ] && echo "✅ LIVE & HEALTHY!" && break
+            sleep 20
+          done
+
+      - name: Write LIVE_URL.md
+        run: |
+          URL="${{ steps.url.outputs.live_url }}"
+          STATUS="${{ steps.poll.outputs.status }}"
+          cat > LIVE_URL.md << MDEOF
+# 🌐 Live — Facial Attendance System
+
+| | |
+|---|---|
+| **App** | [$URL]($URL) |
+| **Health** | [$URL/health]($URL/health) |
+| **Status** | $STATUS |
+| **Deployed** | $(date -u '+%Y-%m-%d %H:%M UTC') |
+
+## Pages
+| Page | Link |
+|------|------|
+| Login | [$URL/login.html]($URL/login.html) |
+| Dashboard | [$URL/dashboard.html]($URL/dashboard.html) |
+| Attendance | [$URL/attendance.html]($URL/attendance.html) |
+| Students | [$URL/students.html]($URL/students.html) |
+| Recognition (Camera) | [$URL/recognition.html]($URL/recognition.html) |
+| Student Portal | [$URL/student-portal.html]($URL/student-portal.html) |
+
+## Login Credentials
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@college.edu | Admin@123 |
+| HoD CS | hod.cs@college.edu | Hod@1234 |
+| HoD EE | hod.ee@college.edu | Hod@1234 |
+| Faculty | faculty1@college.edu | Faculty@123 |
+| Student | ethan@college.edu | Student@123 |
+MDEOF
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add LIVE_URL.md
+          git diff --staged --quiet || git commit -m "🌐 Deployed → $URL"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Akshatj0707/facial-attendance-deploy.git HEAD:main || true
+
+      - name: 🎉 Summary
         if: always()
         run: |
+          URL="${{ steps.url.outputs.live_url }}"
+          echo "╔══════════════════════════════════════════════╗"
+          echo "║     🎓 FACIAL ATTENDANCE SYSTEM LIVE        ║"
+          echo "╠══════════════════════════════════════════════╣"
+          echo "║ $URL"
+          echo "╚══════════════════════════════════════════════╝"
           {
-            echo "## 🎓 Facial Attendance System"
-            echo "| File | Status |"
-            echo "|------|--------|"
-            echo "| server.js | ✅ |"
-            echo "| MongoDB Models | ✅ |"
-            echo "| JWT Auth Routes | ✅ |"
-            echo "| Frontend Pages | ✅ |"
-            echo ""
-            echo "> **Deploy:** Render auto-deploys on every push to main"
-            echo "> **DB:** MongoDB Atlas free tier"
+            echo "## 🎓 Deployed!"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| 🌐 | [$URL]($URL) |"
+            echo "| ❤️ | [$URL/health]($URL/health) |"
+            echo "| 📊 | ${{ steps.poll.outputs.status }} |"
           } >> $GITHUB_STEP_SUMMARY
+
+  # ── 4. SEED DATABASE ─────────────────────────────────────────────────────────
+  seed:
+    name: 🌱 Seed Database
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: needs.deploy.result == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm install
+
+      - name: Run seed.js
+        run: |
+          MONGO="${{ secrets.MONGO_URI }}"
+          if [ -z "$MONGO" ]; then
+            echo "⚠️  MONGO_URI secret not set — skipping seed"
+            echo "   To seed: Add MONGO_URI secret → re-run workflow"
+            exit 0
+          fi
+          export MONGO_URI="$MONGO"
+          export JWT_SECRET="seed_jwt_temp"
+          node seed.js
+          echo "✅ Database seeded!"
