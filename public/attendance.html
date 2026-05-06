@@ -1,385 +1,191 @@
 <!DOCTYPE html>
-
-<html class="light" lang="en"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Attendance Log - College Attendance System</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "secondary-fixed": "#d5e3fd",
-                        "secondary": "#515f74",
-                        "on-secondary-fixed": "#0d1c2f",
-                        "on-tertiary-fixed": "#001d31",
-                        "inverse-on-surface": "#eff1f3",
-                        "surface-container-high": "#e6e8ea",
-                        "on-background": "#191c1e",
-                        "outline": "#76777d",
-                        "surface-dim": "#d8dadc",
-                        "secondary-container": "#d5e3fd",
-                        "on-secondary-container": "#57657b",
-                        "surface-variant": "#e0e3e5",
-                        "tertiary-fixed": "#cce5ff",
-                        "tertiary-fixed-dim": "#93ccff",
-                        "primary-fixed-dim": "#bec6e0",
-                        "outline-variant": "#c6c6cd",
-                        "inverse-surface": "#2d3133",
-                        "primary-fixed": "#dae2fd",
-                        "inverse-primary": "#bec6e0",
-                        "on-primary-fixed-variant": "#3f465c",
-                        "on-secondary": "#ffffff",
-                        "tertiary": "#000000",
-                        "on-secondary-fixed-variant": "#3a485c",
-                        "on-surface": "#191c1e",
-                        "error": "#ba1a1a",
-                        "surface-container": "#eceef0",
-                        "on-error": "#ffffff",
-                        "primary-container": "#131b2e",
-                        "tertiary-container": "#001d31",
-                        "on-tertiary-container": "#188ace",
-                        "error-container": "#ffdad6",
-                        "surface": "#f7f9fb",
-                        "surface-container-highest": "#e0e3e5",
-                        "surface-container-low": "#f2f4f6",
-                        "on-tertiary-fixed-variant": "#004b73",
-                        "surface-tint": "#565e74",
-                        "surface-container-lowest": "#ffffff",
-                        "on-tertiary": "#ffffff",
-                        "on-error-container": "#93000a",
-                        "on-primary": "#ffffff",
-                        "on-primary-fixed": "#131b2e",
-                        "background": "#f7f9fb",
-                        "on-primary-container": "#7c839b",
-                        "secondary-fixed-dim": "#b9c7e0",
-                        "surface-bright": "#f7f9fb",
-                        "on-surface-variant": "#45464d",
-                        "primary": "#000000"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0.125rem",
-                        "lg": "0.25rem",
-                        "xl": "0.5rem",
-                        "full": "0.75rem"
-                    },
-                    "spacing": {
-                        "margin": "32px",
-                        "xl": "64px",
-                        "sm": "12px",
-                        "xs": "4px",
-                        "lg": "40px",
-                        "gutter": "16px",
-                        "md": "24px",
-                        "base": "8px"
-                    },
-                    "fontFamily": {
-                        "body-lg": ["Public Sans"],
-                        "label-sm": ["Public Sans"],
-                        "label-md": ["Public Sans"],
-                        "data-table": ["Public Sans"],
-                        "h1": ["Public Sans"],
-                        "h2": ["Public Sans"],
-                        "body-md": ["Public Sans"],
-                        "h3": ["Public Sans"],
-                        "body-sm": ["Public Sans"]
-                    },
-                    "fontSize": {
-                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
-                        "label-sm": ["12px", {"lineHeight": "1", "fontWeight": "500"}],
-                        "label-md": ["14px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
-                        "data-table": ["13px", {"lineHeight": "1.4", "fontWeight": "400"}],
-                        "h1": ["40px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
-                        "h2": ["32px", {"lineHeight": "1.25", "letterSpacing": "-0.01em", "fontWeight": "600"}],
-                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
-                        "h3": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
-                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}]
-                    }
-                },
-            },
-        }
-    </script>
-<style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        body { font-family: 'Public Sans', sans-serif; }
-    </style>
-<script src="auth.js"></script>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="Attendance Log"/><meta name="page-sub" content="Filter, view & manage attendance records"/>
+<title>Attendance — Attendance System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="db.js"></script><script src="layout.js"></script>
 </head>
-<body class="bg-background text-on-background flex h-screen overflow-hidden">
-<!-- SideNavBar (Shared Component) -->
-<aside class="h-screen w-64 border-r sticky top-0 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 flex flex-col py-6">
-<div class="px-6 mb-8 flex items-center gap-3">
-<div class="w-10 h-10 bg-primary-container rounded flex items-center justify-center text-white">
-<span class="material-symbols-outlined" data-icon="school">school</span>
-</div>
-<div>
-<h2 class="font-bold text-[#0F172A] dark:text-white uppercase tracking-wider text-xs">Admin Portal</h2>
-<p class="text-[10px] text-slate-500 font-medium">Department of Registrar</p>
-</div>
-</div>
-<nav class="flex-grow space-y-1">
-<a class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-6 py-3 hover:text-[#0F172A] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 transition-all font-['Public_Sans'] text-sm font-medium" href="dashboard.html">
-<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
-<span>Dashboard</span>
-</a>
-<a class="flex items-center gap-3 bg-white dark:bg-slate-900 text-[#0F172A] dark:text-white border-r-4 border-[#0F172A] dark:border-slate-400 font-bold px-6 py-3 font-['Public_Sans'] text-sm" href="attendance.html">
-<span class="material-symbols-outlined" data-icon="list_alt">list_alt</span>
-<span>Attendance Log</span>
-</a>
-<a class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-6 py-3 hover:text-[#0F172A] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 transition-all font-['Public_Sans'] text-sm font-medium" href="students.html">
-<span class="material-symbols-outlined" data-icon="group">group</span>
-<span>Student Management</span>
-</a>
-<a class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-6 py-3 hover:text-[#0F172A] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 transition-all font-['Public_Sans'] text-sm font-medium" href="recognition.html">
-<span class="material-symbols-outlined" data-icon="face">face</span>
-<span>Recognition Interface</span>
-</a>
-</nav>
-<div class="px-6 mt-auto">
-<button class="flex items-center gap-3 text-slate-600 dark:text-slate-400 py-3 hover:text-error transition-colors font-['Public_Sans'] text-sm font-medium">
-<span class="material-symbols-outlined" data-icon="logout">logout</span>
-<span>Log Out</span>
-</button>
-</div>
-</aside>
-<div class="flex-1 flex flex-col overflow-hidden">
-<!-- TopNavBar (Shared Component) -->
-<header class="flex items-center justify-between px-8 h-16 w-full z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-<div class="flex items-center gap-4 flex-1">
-<div class="relative w-full max-w-md">
-<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" data-icon="search">search</span>
-<input class="w-full bg-slate-50 border-none rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary-container" placeholder="Search logs, IDs, or students..." type="text"/>
-</div>
-</div>
-<div class="flex items-center gap-6">
-<div class="flex items-center gap-4 text-slate-500">
-<button class="hover:bg-slate-50 p-2 rounded-full transition-colors"><span class="material-symbols-outlined" data-icon="notifications">notifications</span></button>
-<button class="hover:bg-slate-50 p-2 rounded-full transition-colors"><span class="material-symbols-outlined" data-icon="settings">settings</span></button>
-<button class="hover:bg-slate-50 p-2 rounded-full transition-colors"><span class="material-symbols-outlined" data-icon="help">help</span></button>
-</div>
-<div class="h-8 w-[1px] bg-slate-200"></div>
-<div class="flex items-center gap-3">
-<div class="text-right">
-<p class="text-sm font-bold text-slate-900">Admin User</p>
-<p class="text-[10px] text-slate-500 uppercase tracking-tighter">Registrar Office</p>
-</div>
-<img alt="Administrator Profile" class="w-10 h-10 rounded-full border-2 border-slate-100 object-cover" data-alt="professional portrait of a male college administrator in a crisp white shirt and navy tie with soft office lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTB0UNQYH6XKIPtvQFslNACovragy3_SEhOt1Hntpq7ojUVGTFgD6qPszorcnCaXoA4oArtDkLZsGusTm-ABSt8-rZs7G4dcrcdsYptX5gLSO35ORNyMWrWejrNx3WGiCqf_5Nzfm7nWyW5nf0K5D-a83u56lt0qmVO936ITfJPls56OH2R6kd3m5ZVcNWn2FosPFMJpQFsSDLF5e-_V_MhrSq2EzQQRoJA4X-BH16ledzVmpUbABicH89wZVL5CScgGWaJvr8-ECL"/>
-</div>
-</div>
-</header>
-<!-- Main Content Area -->
-<main class="flex-1 overflow-y-auto p-margin bg-background">
-<!-- Header Section -->
-<div class="mb-lg flex flex-col md:flex-row md:items-end justify-between gap-md">
-<div class="space-y-base">
-<nav class="flex items-center gap-2 text-label-sm text-slate-500">
-<a class="hover:text-primary-container" href="#">University</a>
-<span class="material-symbols-outlined text-[12px]" data-icon="chevron_right">chevron_right</span>
-<a class="hover:text-primary-container" href="#">Logs</a>
-<span class="material-symbols-outlined text-[12px]" data-icon="chevron_right">chevron_right</span>
-<span class="text-on-surface">Daily Attendance</span>
-</nav>
-<h1 class="font-h1 text-h1 text-on-background">Attendance Log</h1>
-<p class="text-body-sm text-slate-600">Review and manage facial recognition attendance records.</p>
-</div>
-<div class="flex gap-base">
-<button class="flex items-center gap-2 px-md py-base border border-slate-200 bg-white hover:bg-slate-50 text-label-md rounded transition-colors">
-<span class="material-symbols-outlined" data-icon="download">download</span>
-                        Export CSV
-                    </button>
-<button class="flex items-center gap-2 px-md py-base bg-[#0F172A] text-white hover:bg-slate-800 text-label-md rounded transition-colors shadow-sm">
-<span class="material-symbols-outlined" data-icon="print">print</span>
-                        Print Summary
-                    </button>
-</div>
-</div>
-<!-- Filter & Controls Bento Section -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter mb-lg">
-<div class="md:col-span-1 bg-white p-md border border-slate-200 rounded flex flex-col justify-between">
-<label class="text-label-sm text-slate-500 mb-base block">Date Range</label>
-<div class="flex items-center gap-2 text-body-sm font-medium">
-<span class="material-symbols-outlined text-slate-400" data-icon="calendar_today">calendar_today</span>
-<span>Oct 24, 2023 - Oct 24, 2023</span>
-</div>
-</div>
-<div class="md:col-span-1 bg-white p-md border border-slate-200 rounded">
-<label class="text-label-sm text-slate-500 mb-base block">Department</label>
-<select class="w-full border-none p-0 text-body-sm font-medium focus:ring-0 cursor-pointer">
-<option>All Departments</option>
-<option>Computer Science</option>
-<option>Mechanical Engineering</option>
-<option>Business Admin</option>
-</select>
-</div>
-<div class="md:col-span-1 bg-white p-md border border-slate-200 rounded">
-<label class="text-label-sm text-slate-500 mb-base block">Course</label>
-<select class="w-full border-none p-0 text-body-sm font-medium focus:ring-0 cursor-pointer">
-<option>All Courses</option>
-<option>CS-101 (Intro to AI)</option>
-<option>CS-302 (Database)</option>
-<option>ME-201 (Dynamics)</option>
-</select>
-</div>
-<div class="md:col-span-1 bg-white p-md border border-slate-200 rounded">
-<label class="text-label-sm text-slate-500 mb-base block">Verification Status</label>
-<div class="flex gap-base mt-1">
-<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">Success</span>
-<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Flagged</span>
-</div>
-</div>
-</div>
-<!-- Data Table Card -->
-<div class="bg-white border border-slate-200 rounded overflow-hidden">
-<div class="overflow-x-auto">
-<table class="w-full text-left border-collapse font-data-table text-data-table">
-<thead class="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-<tr>
-<th class="px-6 py-4 font-label-md text-label-md text-slate-500">Student Name</th>
-<th class="px-6 py-4 font-label-md text-label-md text-slate-500">Student ID</th>
-<th class="px-6 py-4 font-label-md text-label-md text-slate-500">Department</th>
-<th class="px-6 py-4 font-label-md text-label-md text-slate-500">Course</th>
-<th class="px-6 py-4 font-label-md text-label-md text-slate-500">Check-In</th>
-<th class="px-6 py-4 font-label-md text-label-md text-slate-500">Check-Out</th>
-<th class="px-6 py-4 font-label-md text-label-md text-slate-500">Verification</th>
-<th class="px-6 py-4 font-label-md text-label-md text-slate-500 text-right">Action</th>
-</tr>
-</thead>
-<tbody id="att-table-body" class="divide-y divide-slate-100">
-<!-- Row 1 -->
-
-<!-- Row 2 -->
-
-<!-- Row 3 -->
-
-<!-- Row 4 -->
-
-</tbody>
-</table>
-</div>
-<!-- Pagination Footer -->
-<div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50/50">
-<p class="text-label-sm text-slate-500">Showing 1-10 of 1,240 entries</p>
-<div class="flex items-center gap-2">
-<button class="p-2 border border-slate-200 rounded bg-white hover:bg-slate-50 disabled:opacity-50" disabled="">
-<span class="material-symbols-outlined text-[18px]" data-icon="chevron_left">chevron_left</span>
-</button>
-<button class="px-3 py-1.5 rounded bg-[#0F172A] text-white text-label-sm">1</button>
-<button class="px-3 py-1.5 rounded hover:bg-white text-label-sm border border-transparent hover:border-slate-200">2</button>
-<button class="px-3 py-1.5 rounded hover:bg-white text-label-sm border border-transparent hover:border-slate-200">3</button>
-<span class="px-2 text-slate-400">...</span>
-<button class="px-3 py-1.5 rounded hover:bg-white text-label-sm border border-transparent hover:border-slate-200">124</button>
-<button class="p-2 border border-slate-200 rounded bg-white hover:bg-slate-50">
-<span class="material-symbols-outlined text-[18px]" data-icon="chevron_right">chevron_right</span>
-</button>
-</div>
-</div>
-</div>
-<!-- Dashboard Utility Section -->
-<div class="mt-lg grid grid-cols-1 lg:grid-cols-3 gap-gutter">
-<div class="bg-white p-md border border-slate-200 rounded flex items-center gap-md">
-<div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center">
-<span class="material-symbols-outlined" data-icon="person_check">person_check</span>
-</div>
-<div>
-<h4 class="text-label-sm text-slate-500">Average Attendance</h4>
-<p class="text-h3 font-h3 text-on-background">94.2%</p>
-</div>
-</div>
-<div class="bg-white p-md border border-slate-200 rounded flex items-center gap-md">
-<div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center">
-<span class="material-symbols-outlined" data-icon="warning">warning</span>
-</div>
-<div>
-<h4 class="text-label-sm text-slate-500">Flagged Instances</h4>
-<p class="text-h3 font-h3 text-on-background">12</p>
-</div>
-</div>
-<div class="bg-white p-md border border-slate-200 rounded flex items-center gap-md">
-<div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center">
-<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
-</div>
-<div>
-<h4 class="text-label-sm text-slate-500">Peak Check-in Time</h4>
-<p class="text-h3 font-h3 text-on-background">08:45 AM</p>
-</div>
-</div>
-</div>
-</main>
-</div>
+<body>
 <script>
-Auth.require(['admin','hod','faculty']);
-Auth.fillNavbar();
+const user  = App.init(['admin','hod','faculty']);
+const deptF = user?.role==='admin' ? null : user?.dept;
+const canDel= user?.role==='admin' || user?.role==='hod';
+let f = { search:'', dept:'all', status:'all', date: new Date().toISOString().split('T')[0] };
 
-let filters = { search:'', department:'all', status:'all', date:'' };
+function render() {
+  document.getElementById('page-content').innerHTML = `
+  <div style="max-width:1400px">
+    <!-- Filters -->
+    <div class="card" style="padding:16px 20px;margin-bottom:20px">
+      <div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:10px;align-items:center;flex-wrap:wrap" class="filter-grid">
+        <div style="position:relative">
+          <span class="material-symbols-outlined" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:18px">search</span>
+          <input type="text" id="att-search" placeholder="Search student…" value="${f.search}" oninput="f.search=this.value;renderRows()"
+            style="padding-left:36px;width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding-top:9px;padding-bottom:9px;font-size:13px;color:#1e293b"/>
+        </div>
+        <input type="date" id="att-date" value="${f.date}" onchange="f.date=this.value;renderRows()"
+          style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:13px"/>
+        ${!deptF?`<select id="att-dept" onchange="f.dept=this.value;renderRows()" style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:13px">
+          <option value="all">All Depts</option>
+          <option>Computer Science</option><option>Electrical Engineering</option>
+          <option>Mechanical Engineering</option><option>Civil Engineering</option>
+        </select>`:''}
+        <select id="att-status" onchange="f.status=this.value;renderRows()" style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:13px">
+          <option value="all">All Status</option>
+          <option value="Present">Present</option>
+          <option value="Late">Late</option>
+          <option value="Absent">Absent</option>
+        </select>
+        <button onclick="exportCSV()" class="btn btn-secondary" style="font-size:12px;white-space:nowrap">
+          <span class="material-symbols-outlined" style="font-size:16px">download</span>Export CSV
+        </button>
+      </div>
+    </div>
 
-async function loadAttendance() {
-  const params = new URLSearchParams({ limit:100 });
-  if (filters.search)     params.append('search',     filters.search);
-  if (filters.department !== 'all') params.append('department', filters.department);
-  if (filters.status     !== 'all') params.append('status',     filters.status);
-  if (filters.date)       params.append('date',       filters.date);
+    <!-- Summary cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px" id="summary-row"></div>
 
-  try {
-    const res  = await Auth.fetch(`/api/attendance?${params}`);
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-    const { rows, total } = json.data;
-    const tbody = document.getElementById('att-table-body');
-    if (!tbody) return;
-    tbody.innerHTML = !rows.length
-      ? '<tr><td colspan="7" class="text-center py-8 text-slate-400">No records found.</td></tr>'
-      : rows.map((r,i) => {
-          const s   = r.student || {};
-          const dt  = new Date(r.checkIn);
-          const ds  = dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-          const ts  = dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-          const badge = r.status==='Present'?'bg-emerald-100 text-emerald-700':
-                        r.status==='Late'   ?'bg-amber-100 text-amber-700':'bg-red-100 text-red-700';
-          const user = Auth.getUser();
-          const canDel = user.role==='admin'||user.role==='hod';
-          return `<tr class="${i%2?'bg-slate-50/50':''} hover:bg-slate-50">
-            <td class="px-6 py-4"><div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">${s.avatar||'??'}</div>
-              <div><p class="font-bold text-slate-900 text-sm">${s.name||'—'}</p><p class="text-[11px] text-slate-500">${s.studentId||'—'}</p></div>
-            </div></td>
-            <td class="px-6 py-4 text-slate-600 text-sm">${s.department||'—'}</td>
-            <td class="px-6 py-4 text-slate-600 text-sm">${ds}</td>
-            <td class="px-6 py-4 text-slate-600 text-sm">${ts}</td>
-            <td class="px-6 py-4 text-slate-600 text-sm">${r.terminal||'—'}</td>
-            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-[11px] font-semibold ${badge}">${r.status}</span></td>
-            <td class="px-6 py-4 text-right">
-              ${canDel ? `<button onclick="delRecord('${r._id}')" class="text-slate-400 hover:text-red-500 transition-colors">
-                <span class="material-symbols-outlined text-sm">delete</span></button>` : ''}
-            </td>
-          </tr>`;
-        }).join('');
-  } catch(e) { console.error(e); }
+    <!-- Table -->
+    <div class="card" style="overflow:hidden">
+      <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
+        <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">Attendance Records</h3>
+        <span id="row-count" style="font-size:12px;color:#94a3b8"></span>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>Student</th><th>Date</th><th>Check-in</th><th>Department</th>
+            <th>Course</th><th>Terminal</th><th>Status</th><th>Confidence</th>
+            ${canDel?'<th></th>':''}
+          </tr></thead>
+          <tbody id="att-tbody"><tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Manual add (admin/hod/faculty) -->
+    ${user.role!=='student'?`<div style="margin-top:16px;display:flex;justify-content:flex-end">
+      <button onclick="openManualModal()" class="btn btn-primary">
+        <span class="material-symbols-outlined" style="font-size:16px">add_circle</span>Mark Attendance Manually
+      </button>
+    </div>`:''}
+  </div>
+  <style>
+    @media(max-width:700px){.filter-grid{grid-template-columns:1fr!important}}
+  </style>`;
+  renderRows();
 }
 
-async function delRecord(id) {
-  if (!confirm('Delete this attendance record?')) return;
-  const res = await Auth.fetch(`/api/attendance/${id}`, { method:'DELETE' });
-  if (res) loadAttendance();
+function renderRows() {
+  const q = {
+    search: f.search||undefined, date: f.date||undefined, status: f.status!=='all'?f.status:undefined,
+    limit: 100
+  };
+  if (deptF) q.dept = deptF; else if (f.dept!=='all') q.dept = f.dept;
+  const { rows, total } = DB.getAttendance(q);
+  const tbody = document.getElementById('att-tbody');
+  const countEl= document.getElementById('row-count');
+  if (countEl) countEl.textContent = `${total} records`;
+
+  // Summary
+  const sumEl = document.getElementById('summary-row');
+  if (sumEl) {
+    const present = rows.filter(r=>r.status==='Present').length;
+    const late    = rows.filter(r=>r.status==='Late').length;
+    const absent  = rows.filter(r=>r.status==='Absent').length;
+    sumEl.innerHTML = `
+      ${miniSum('Present',present,'#10b981','check_circle')}
+      ${miniSum('Late',   late,   '#f59e0b','schedule')}
+      ${miniSum('Absent', absent, '#ef4444','cancel')}
+      ${miniSum('Total',  total,  '#3b82f6','list_alt')}`;
+  }
+
+  if (!tbody) return;
+  if (!rows.length) { tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8">No records found for selected filters</td></tr>`; return; }
+  tbody.innerHTML = rows.map((r,i) => `<tr>
+    <td><div style="display:flex;align-items:center;gap:9px">
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:10px;flex-shrink:0">${r.avatar||'??'}</div>
+      <div><p style="font-size:13px;font-weight:600;color:#1e293b;margin:0">${r.stuName||'—'}</p><p style="font-size:11px;color:#94a3b8;margin:0">${r.stuId||'—'}</p></div>
+    </div></td>
+    <td style="font-size:12px;color:#374151;white-space:nowrap">${App.formatDate(r.checkIn)}</td>
+    <td style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap">${App.formatTime(r.checkIn)}</td>
+    <td style="font-size:12px;color:#374151">${r.dept||'—'}</td>
+    <td><span style="font-size:12px;background:#f1f5f9;padding:2px 8px;border-radius:6px">${r.course||'—'}</span></td>
+    <td style="font-size:12px;color:#64748b">${r.terminal||'—'}</td>
+    <td>${App.badgeHtml(r.status)}</td>
+    <td><div style="display:flex;align-items:center;gap:4px">
+      <div style="width:${Math.round((r.conf||0.95)*50)}px;height:4px;border-radius:99px;background:${r.conf>=0.9?'#10b981':r.conf>=0.8?'#f59e0b':'#ef4444'}"></div>
+      <span style="font-size:11px;color:#64748b">${Math.round((r.conf||0.95)*100)}%</span>
+    </div></td>
+    ${canDel?`<td>
+      <button onclick="delRecord('${r.id}')" style="width:28px;height:28px;border:none;background:#fee2e2;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#ef4444">
+        <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+      </button>
+    </td>`:''}
+  </tr>`).join('');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const si = document.getElementById('filter-search');
-  if (si) si.addEventListener('input', e => { filters.search=e.target.value; loadAttendance(); });
-  document.querySelectorAll('select').forEach(sel => {
-    sel.addEventListener('change', e => {
-      const name = sel.getAttribute('name')||'';
-      if (name==='department') { filters.department=e.target.value; loadAttendance(); }
-      if (name==='status')     { filters.status=e.target.value;     loadAttendance(); }
-    });
+function miniSum(label, val, color, icon) {
+  return `<div style="background:white;border-radius:12px;padding:12px 14px;border:1px solid #f1f5f9;display:flex;align-items:center;gap:10px">
+    <span class="material-symbols-outlined" style="color:${color};font-size:20px">${icon}</span>
+    <div><p style="font-size:18px;font-weight:800;color:#0f172a;margin:0">${val}</p><p style="font-size:11px;color:#94a3b8;margin:0">${label}</p></div>
+  </div>`;
+}
+
+function delRecord(id) {
+  App.modal('Delete Record','<p style="color:#374151;font-size:14px">Remove this attendance record permanently?</p>',()=>{
+    DB.deleteAttendance(id);
+    App.toast('Record deleted','success');
+    renderRows();
   });
-  loadAttendance();
-});
+}
+
+function exportCSV() {
+  const q = { search:f.search||undefined, date:f.date||undefined, status:f.status!=='all'?f.status:undefined, limit:5000 };
+  if (deptF) q.dept=deptF; else if(f.dept!=='all') q.dept=f.dept;
+  const { rows } = DB.getAttendance(q);
+  const header = 'Name,Student ID,Date,Time,Department,Course,Terminal,Status,Confidence';
+  const csv = [header, ...rows.map(r=>`"${r.stuName}","${r.stuId}","${App.formatDate(r.checkIn)}","${App.formatTime(r.checkIn)}","${r.dept}","${r.course}","${r.terminal}","${r.status}","${Math.round((r.conf||0.95)*100)}%"`)].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`attendance_${f.date||'all'}.csv`; a.click();
+  App.toast('Exported!','success');
+}
+
+function openManualModal() {
+  const {rows:students} = DB.getStudents({dept:deptF||undefined, bio:'Enrolled', limit:100});
+  App.modal('Mark Attendance Manually',`
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Student *</label>
+        <select id="m-stu" style="width:100%"><option value="">Select student…</option>
+          ${students.map(s=>`<option value="${s.id}">${s.name} (${s.stuId})</option>`).join('')}
+        </select></div>
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Status</label>
+        <select id="m-status" style="width:100%"><option value="Present">Present</option><option value="Late">Late</option><option value="Absent">Absent</option></select></div>
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Terminal</label>
+        <input id="m-terminal" type="text" value="Manual Entry" style="width:100%"/></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button onclick="document.getElementById('app-modal').remove()" class="btn btn-secondary" style="flex:1">Cancel</button>
+      <button onclick="submitManual()" class="btn btn-primary" style="flex:1">Mark Attendance</button>
+    </div>`);
+}
+
+function submitManual() {
+  const stuId    = document.getElementById('m-stu').value;
+  const status   = document.getElementById('m-status').value;
+  const terminal = document.getElementById('m-terminal').value;
+  if (!stuId) { App.toast('Select a student','warning'); return; }
+  DB.addAttendance({stuId, status, terminal, course:''});
+  document.getElementById('app-modal').remove();
+  App.toast('Attendance marked!','success');
+  renderRows();
+}
+
+render();
 </script>
-</body></html>
+</body>
+</html>

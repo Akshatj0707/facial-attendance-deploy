@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="Reports &amp; Analytics"/><meta name="page-sub" content="Insights, trends &amp; export"/>
+<title>Reports — Attendance System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="db.js"></script><script src="layout.js"></script>
+</head>
+<body>
+<script>
+const user  = App.init(['admin','hod','faculty']);
+const deptF = user?.role==='admin' ? null : user?.dept;
+
+function render() {
+  const stats  = DB.getStats(deptF);
+  const allAtt = DB.getAttendance({dept:deptF||undefined,limit:5000}).rows;
+  const students = DB.getStudents({dept:deptF||undefined}).rows;
+
+  // 7-day trend
+  const days=[]; for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().split('T')[0]);}
+  const dailyData = days.map(day=>{
+    const recs=allAtt.filter(a=>a.checkIn.startsWith(day));
+    const present=recs.filter(a=>a.status==='Present').length;
+    const late=recs.filter(a=>a.status==='Late').length;
+    return {day:day.slice(5),present,late,total:recs.length};
+  });
+
+  // Per-student attendance rate
+  const stuRates = students.map(s=>{
+    const recs=allAtt.filter(a=>a.stuRef===s.id);
+    const rate=recs.length?Math.round(recs.filter(r=>r.status!=='Absent').length/recs.length*100):0;
+    return {...s,rate,records:recs.length};
+  }).sort((a,b)=>b.rate-a.rate);
+
+  // Low attendance students
+  const lowAtt = stuRates.filter(s=>s.rate<75&&s.records>0);
+
+  document.getElementById('page-content').innerHTML = `
+  <div style="max-width:1300px">
+    <!-- Overview cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px">
+      ${ovCard('Total Records', allAtt.length, '#3b82f6','list_alt')}
+      ${ovCard('Avg Rate Today', (stats.total?Math.round(stats.present/stats.total*100):0)+'%','#10b981','trending_up')}
+      ${ovCard('Late This Week', allAtt.filter(a=>a.status==='Late').length,'#f59e0b','schedule')}
+      ${ovCard('Low Attendance', lowAtt.length,'#ef4444','warning')}
+      ${ovCard('Bio Enrolled', DB.getStudents({bio:'Enrolled',dept:deptF||undefined}).total,'#8b5cf6','face_retouching_natural')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:18px" class="rep-grid">
+      <!-- 7-day trend -->
+      <div class="card" style="padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">7-Day Attendance Trend</h3>
+            <p style="font-size:12px;color:#94a3b8;margin:2px 0 0">Daily check-in volume</p>
+          </div>
+          <button onclick="exportReport()" class="btn btn-secondary" style="font-size:12px">
+            <span class="material-symbols-outlined" style="font-size:15px">download</span>Export
+          </button>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:10px;height:160px;padding-bottom:24px;position:relative">
+          ${dailyData.map(d=>{
+            const max=Math.max(...dailyData.map(x=>x.total),1);
+            const hp=Math.round(d.total/max*130);
+            const hp2=Math.round(d.late/max*130);
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end">
+              <span style="font-size:10px;color:#64748b;font-weight:600">${d.total||''}</span>
+              <div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:100%">
+                <div style="width:100%;border-radius:6px 6px 0 0;background:#3b82f6;height:${hp}px;position:relative">
+                  ${d.late?`<div style="position:absolute;bottom:0;width:100%;background:#f59e0b;height:${hp2}px;border-radius:6px 6px 0 0"></div>`:''}
+                </div>
+              </div>
+              <span style="font-size:9px;color:#94a3b8;font-weight:600;position:absolute;bottom:4px">${d.day}</span>
+            </div>`;
+          }).join('')}
+        </div>
+        <div style="display:flex;gap:14px;margin-top:4px">
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:3px;background:#3b82f6"></div><span style="font-size:11px;color:#64748b">Present</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:3px;background:#f59e0b"></div><span style="font-size:11px;color:#64748b">Late</span></div>
+        </div>
+      </div>
+
+      <!-- Dept pie-like -->
+      <div class="card" style="padding:20px">
+        <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0 0 4px">Dept. Distribution</h3>
+        <p style="font-size:12px;color:#94a3b8;margin:0 0 14px">Students per department</p>
+        ${stats.depts.map((d,i)=>{
+          const colors=['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444'];
+          const pct=students.length?Math.round(d.total/students.length*100):0;
+          return `<div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:11px;font-weight:600;color:#374151">${d.dept.split(' ')[0]} ${d.dept.split(' ')[1]||''}</span>
+              <span style="font-size:11px;color:#64748b">${d.total} (${pct}%)</span>
+            </div>
+            <div style="height:7px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+              <div style="height:100%;background:${colors[i%colors.length]};border-radius:99px;width:${pct}%;transition:width 1s"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- Low attendance alert -->
+    ${lowAtt.length ? `<div class="card" style="padding:20px;margin-bottom:18px;border:1.5px solid #fecaca">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="width:36px;height:36px;border-radius:10px;background:#fee2e2;display:flex;align-items:center;justify-content:center">
+          <span class="material-symbols-outlined" style="color:#ef4444;font-size:20px">warning</span>
+        </div>
+        <div>
+          <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">Low Attendance Alert</h3>
+          <p style="font-size:12px;color:#94a3b8;margin:0">${lowAtt.length} students below 75% attendance</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+        ${lowAtt.slice(0,8).map(s=>`<div style="background:#fff5f5;border:1.5px solid #fecaca;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:11px;flex-shrink:0">${s.avatar}</div>
+          <div style="overflow:hidden">
+            <p style="font-size:12px;font-weight:600;color:#1e293b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</p>
+            <p style="font-size:11px;color:#ef4444;font-weight:700;margin:0">${s.rate}% · ${s.records} records</p>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <!-- Student-wise table -->
+    <div class="card" style="overflow:hidden">
+      <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
+        <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">Student-wise Attendance</h3>
+        <span style="font-size:12px;color:#94a3b8">${stuRates.length} students</span>
+      </div>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Student</th><th>Dept</th><th>Total Records</th><th>Present</th><th>Late</th><th>Rate</th><th>Status</th></tr></thead>
+        <tbody>
+          ${stuRates.slice(0,20).map(s=>{
+            const late=allAtt.filter(a=>a.stuRef===s.id&&a.status==='Late').length;
+            const present=allAtt.filter(a=>a.stuRef===s.id&&a.status==='Present').length;
+            const color=s.rate>=85?'#10b981':s.rate>=75?'#f59e0b':'#ef4444';
+            return `<tr>
+              <td><div style="display:flex;align-items:center;gap:9px">
+                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:10px">${s.avatar}</div>
+                <div><p style="font-size:13px;font-weight:600;color:#1e293b;margin:0">${s.name}</p><p style="font-size:11px;color:#94a3b8;margin:0">${s.stuId}</p></div>
+              </div></td>
+              <td style="font-size:12px">${s.dept}</td>
+              <td style="font-size:13px;font-weight:600">${s.records}</td>
+              <td style="font-size:13px;color:#166534;font-weight:600">${present}</td>
+              <td style="font-size:13px;color:#92400e;font-weight:600">${late}</td>
+              <td><div style="display:flex;align-items:center;gap:6px">
+                <div style="width:60px;height:6px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+                  <div style="height:100%;background:${color};border-radius:99px;width:${s.rate}%"></div>
+                </div>
+                <span style="font-size:12px;font-weight:700;color:${color}">${s.rate}%</span>
+              </div></td>
+              <td>${s.rate>=85?App.badgeHtml('Enrolled'):s.rate>=75?'<span class="badge badge-amber">Average</span>':'<span class="badge badge-red">Low</span>'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <style>@media(max-width:768px){.rep-grid{grid-template-columns:1fr!important}}</style>`;
+}
+
+function ovCard(label,val,color,icon){
+  return `<div style="background:white;border-radius:14px;padding:16px;border:1px solid #f1f5f9;display:flex;align-items:center;gap:12px">
+    <div style="width:40px;height:40px;border-radius:12px;background:${color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <span class="material-symbols-outlined" style="color:${color};font-size:20px">${icon}</span>
+    </div>
+    <div><p style="font-size:20px;font-weight:800;color:#0f172a;margin:0">${val}</p><p style="font-size:11px;color:#94a3b8;margin:0">${label}</p></div>
+  </div>`;
+}
+
+function exportReport() {
+  const allAtt=DB.getAttendance({dept:deptF||undefined,limit:5000}).rows;
+  const csv=['Name,ID,Date,Status,Department,Course'].concat(allAtt.map(r=>`"${r.stuName}","${r.stuId}","${App.formatDateTime(r.checkIn)}","${r.status}","${r.dept}","${r.course}"`)).join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='attendance_report.csv'; a.click();
+  App.toast('Report exported!','success');
+}
+
+render();
+</script>
+</body>
+</html>

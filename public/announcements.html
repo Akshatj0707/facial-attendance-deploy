@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="Announcements"/><meta name="page-sub" content="Notices, updates & important messages"/>
+<title>Announcements</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="db.js"></script><script src="layout.js"></script>
+</head>
+<body>
+<script>
+const user = App.init();
+const canPost = ['admin','hod'].includes(user?.role);
+
+// Default announcements stored in localStorage
+function getAnn() {
+  const saved = localStorage.getItem('fas_announcements');
+  if (saved) return JSON.parse(saved);
+  const defaults = [
+    {id:'ann1',title:'Mid-Semester Examination Schedule',body:'Mid-semester exams will be held from November 18–25. All students must ensure 75% attendance to be eligible. Contact your HoD for exemptions.',type:'exam',author:'Admin User',role:'admin',dept:'All',date:new Date(Date.now()-86400000*2).toISOString(),pinned:true},
+    {id:'ann2',title:'Biometric Enrollment Drive',body:'Students who have not enrolled their face data must report to the IT Lab (Block C, Room 204) by this Friday. Enrollment is mandatory for automated attendance.',type:'important',author:'Dr. Rahul Sharma',role:'hod',dept:'Computer Science',date:new Date(Date.now()-86400000*1).toISOString(),pinned:true},
+    {id:'ann3',title:'Holiday: Diwali Break',body:'The college will remain closed from October 31 to November 3 for Diwali celebrations. Classes resume on November 4 (Monday).',type:'holiday',author:'Admin User',role:'admin',dept:'All',date:new Date(Date.now()-86400000*3).toISOString(),pinned:false},
+    {id:'ann4',title:'New Semester Timetable Released',body:'The timetable for the upcoming semester has been uploaded to the portal. Students are advised to check their schedules and contact their faculty for any clashes.',type:'info',author:'Admin User',role:'admin',dept:'All',date:new Date(Date.now()-86400000*5).toISOString(),pinned:false},
+    {id:'ann5',title:'Lab Session Rescheduled – CS Lab B',body:'The CS Lab B session scheduled for Thursday has been moved to Friday 2:00 PM due to maintenance. All groups affected should note the change.',type:'info',author:'Prof. Amit Verma',role:'faculty',dept:'Computer Science',date:new Date(Date.now()-86400000*1).toISOString(),pinned:false},
+  ];
+  localStorage.setItem('fas_announcements', JSON.stringify(defaults));
+  return defaults;
+}
+
+function saveAnn(arr) { localStorage.setItem('fas_announcements', JSON.stringify(arr)); }
+
+function render() {
+  const anns = getAnn().sort((a,b)=>{ if(a.pinned&&!b.pinned) return -1; if(!a.pinned&&b.pinned) return 1; return b.date.localeCompare(a.date); });
+  document.getElementById('page-content').innerHTML = `
+  <div style="max-width:900px">
+    ${canPost?`<div style="display:flex;justify-content:flex-end;margin-bottom:20px">
+      <button onclick="openPost()" class="btn btn-primary">
+        <span class="material-symbols-outlined" style="font-size:18px">campaign</span>Post Announcement
+      </button>
+    </div>`:''}
+    <div style="display:flex;flex-direction:column;gap:14px">
+      ${anns.map(a=>annCard(a)).join('')}
+    </div>
+  </div>`;
+}
+
+function annCard(a) {
+  const colors={exam:'#ef4444',important:'#f59e0b',holiday:'#10b981',info:'#3b82f6'};
+  const icons ={exam:'quiz',important:'priority_high',holiday:'celebration',info:'info'};
+  const c=colors[a.type]||'#64748b', ic=icons[a.type]||'campaign';
+  const ago = timeAgo(a.date);
+  return `<div style="background:white;border-radius:16px;border:1px solid #f1f5f9;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:box-shadow .2s"
+    onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,.05)'">
+    <div style="height:4px;background:${c}"></div>
+    <div style="padding:18px 20px">
+      <div style="display:flex;align-items:flex-start;gap:14px">
+        <div style="width:40px;height:40px;border-radius:12px;background:${c}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
+          <span class="material-symbols-outlined" style="color:${c};font-size:20px">${ic}</span>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            ${a.pinned?'<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">📌 PINNED</span>':''}
+            <span style="background:${c}18;color:${c};padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase">${a.type}</span>
+            <span style="background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600">${a.dept}</span>
+          </div>
+          <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0 0 6px">${a.title}</h3>
+          <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 12px">${a.body}</p>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="width:22px;height:22px;border-radius:50%;background:${App.roleColor(a.role)};display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:white">${a.author?.slice(0,2)?.toUpperCase()||'??'}</div>
+              <span style="font-size:12px;font-weight:600;color:#374151">${a.author}</span>
+              <span style="font-size:11px;color:#94a3b8;background:#f8fafc;padding:1px 7px;border-radius:4px">${a.role?.toUpperCase()}</span>
+            </div>
+            <span style="font-size:11px;color:#94a3b8;margin-left:auto">${ago}</span>
+            ${canPost?`<button onclick="deleteAnn('${a.id}')" style="border:none;background:#fee2e2;color:#ef4444;border-radius:7px;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;display:flex;align-items:center;gap:3px">
+              <span class="material-symbols-outlined" style="font-size:13px">delete</span>Delete
+            </button>`:''}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function timeAgo(date) {
+  const d = (Date.now()-new Date(date).getTime())/1000;
+  if(d<60) return 'Just now';
+  if(d<3600) return Math.floor(d/60)+'m ago';
+  if(d<86400) return Math.floor(d/3600)+'h ago';
+  return Math.floor(d/86400)+'d ago';
+}
+
+function deleteAnn(id) {
+  App.modal('Delete Announcement','<p style="color:#374151;font-size:14px">Remove this announcement?</p>',()=>{
+    const arr=getAnn().filter(a=>a.id!==id); saveAnn(arr); render();
+    App.toast('Announcement removed','success');
+  });
+}
+
+function openPost() {
+  App.modal('Post Announcement',`
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Title *</label>
+        <input id="ann-title" type="text" placeholder="e.g. Exam Schedule Update" style="width:100%"/></div>
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Message *</label>
+        <textarea id="ann-body" rows="3" placeholder="Write your announcement…" style="width:100%;resize:vertical"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Type</label>
+          <select id="ann-type" style="width:100%"><option value="info">Info</option><option value="important">Important</option><option value="exam">Exam</option><option value="holiday">Holiday</option></select></div>
+        <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Department</label>
+          <select id="ann-dept" style="width:100%"><option value="All">All Departments</option><option>Computer Science</option><option>Electrical Engineering</option><option>Mechanical Engineering</option><option>Civil Engineering</option></select></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">
+        <input id="ann-pin" type="checkbox" style="width:16px;height:16px"/> Pin this announcement
+      </label>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button onclick="document.getElementById('app-modal').remove()" class="btn btn-secondary" style="flex:1">Cancel</button>
+      <button onclick="submitAnn()" class="btn btn-primary" style="flex:1">Post</button>
+    </div>`);
+}
+
+function submitAnn() {
+  const title = document.getElementById('ann-title').value.trim();
+  const body  = document.getElementById('ann-body').value.trim();
+  if (!title||!body) { App.toast('Fill all required fields','warning'); return; }
+  const arr = getAnn();
+  arr.unshift({
+    id: 'ann'+Date.now(), title, body,
+    type:   document.getElementById('ann-type').value,
+    dept:   document.getElementById('ann-dept').value,
+    pinned: document.getElementById('ann-pin').checked,
+    author: user.name, role: user.role, date: new Date().toISOString(),
+  });
+  saveAnn(arr);
+  document.getElementById('app-modal').remove();
+  App.toast('Announcement posted!','success');
+  render();
+}
+
+render();
+</script></body></html>

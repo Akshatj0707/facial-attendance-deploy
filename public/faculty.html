@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="My Faculty"/><meta name="page-sub" content="Faculty members in your department"/>
+<title>Faculty</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="db.js"></script><script src="layout.js"></script>
+</head>
+<body>
+<script>
+const user = App.init(['admin','hod']);
+const deptF = user?.role==='admin' ? null : user?.dept;
+
+function render() {
+  const allUsers = DB.getUsers().filter(u => u.role === 'faculty' && (deptF ? u.dept === deptF : true));
+  document.getElementById('page-content').innerHTML = `
+  <div style="max-width:1100px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
+      ${allUsers.map(f => facultyCard(f)).join('')}
+      ${!allUsers.length ? `<div style="grid-column:1/-1;text-align:center;padding:60px;color:#94a3b8">
+        <span class="material-symbols-outlined" style="font-size:48px">person_off</span>
+        <p style="margin:12px 0 0;font-size:14px">No faculty found${deptF?' in '+deptF:''}</p>
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
+function facultyCard(f) {
+  const rc = App.ROLE_CONFIG['faculty'];
+  const deptStudents = DB.getStudents({dept:f.dept}).total;
+  return `<div style="background:white;border-radius:16px;border:1.5px solid #f1f5f9;padding:22px;transition:all .2s;cursor:pointer"
+    onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.08)';this.style.borderColor='#c4b5fd'"
+    onmouseout="this.style.boxShadow='none';this.style.borderColor='#f1f5f9'">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+      <div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6d28d9);display:flex;align-items:center;justify-content:center;font-weight:800;color:white;font-size:18px;flex-shrink:0">${f.avatar||f.name?.slice(0,2).toUpperCase()}</div>
+      <div style="overflow:hidden">
+        <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</h3>
+        <p style="font-size:11px;color:#94a3b8;margin:2px 0 0">${f.email}</p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+      ${fRow('apartment', f.dept||'—')}
+      ${fRow('id_card', f.empId||'Not assigned')}
+      ${fRow('call', f.phone||'Not provided')}
+    </div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;background:#f3e8ff;border-radius:10px;padding:10px;text-align:center">
+        <p style="font-size:18px;font-weight:800;color:#6d28d9;margin:0">${deptStudents}</p>
+        <p style="font-size:10px;color:#7c3aed;margin:0">Dept Students</p>
+      </div>
+      <div style="flex:1;background:#f0fdf4;border-radius:10px;padding:10px;text-align:center">
+        <span style="background:${f.active?'#dcfce7':'#fee2e2'};color:${f.active?'#166534':'#991b1b'};padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700">${f.active?'Active':'Inactive'}</span>
+        <p style="font-size:10px;color:#64748b;margin:4px 0 0">Status</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+function fRow(icon, val) {
+  return `<div style="display:flex;align-items:center;gap:8px">
+    <span class="material-symbols-outlined" style="font-size:15px;color:#94a3b8">${icon}</span>
+    <span style="font-size:12px;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${val}</span>
+  </div>`;
+}
+
+render();
+</script></body></html>

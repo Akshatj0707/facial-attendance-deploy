@@ -1,467 +1,198 @@
 <!DOCTYPE html>
-
-<html class="light" lang="en"><head>
+<html lang="en">
+<head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Admin Portal - College Attendance System</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            "colors": {
-                    "secondary-fixed": "#d5e3fd",
-                    "secondary": "#515f74",
-                    "on-secondary-fixed": "#0d1c2f",
-                    "on-tertiary-fixed": "#001d31",
-                    "inverse-on-surface": "#eff1f3",
-                    "surface-container-high": "#e6e8ea",
-                    "on-background": "#191c1e",
-                    "outline": "#76777d",
-                    "surface-dim": "#d8dadc",
-                    "secondary-container": "#d5e3fd",
-                    "on-secondary-container": "#57657b",
-                    "surface-variant": "#e0e3e5",
-                    "tertiary-fixed": "#cce5ff",
-                    "tertiary-fixed-dim": "#93ccff",
-                    "primary-fixed-dim": "#bec6e0",
-                    "outline-variant": "#c6c6cd",
-                    "inverse-surface": "#2d3133",
-                    "primary-fixed": "#dae2fd",
-                    "inverse-primary": "#bec6e0",
-                    "on-primary-fixed-variant": "#3f465c",
-                    "on-secondary": "#ffffff",
-                    "tertiary": "#000000",
-                    "on-secondary-fixed-variant": "#3a485c",
-                    "on-surface": "#191c1e",
-                    "error": "#ba1a1a",
-                    "surface-container": "#eceef0",
-                    "on-error": "#ffffff",
-                    "primary-container": "#131b2e",
-                    "tertiary-container": "#001d31",
-                    "on-tertiary-container": "#188ace",
-                    "error-container": "#ffdad6",
-                    "surface": "#f7f9fb",
-                    "surface-container-highest": "#e0e3e5",
-                    "surface-container-low": "#f2f4f6",
-                    "on-tertiary-fixed-variant": "#004b73",
-                    "surface-tint": "#565e74",
-                    "surface-container-lowest": "#ffffff",
-                    "on-tertiary": "#ffffff",
-                    "on-error-container": "#93000a",
-                    "on-primary": "#ffffff",
-                    "on-primary-fixed": "#131b2e",
-                    "background": "#f7f9fb",
-                    "on-primary-container": "#7c839b",
-                    "secondary-fixed-dim": "#b9c7e0",
-                    "surface-bright": "#f7f9fb",
-                    "on-surface-variant": "#45464d",
-                    "primary": "#000000"
-            },
-            "borderRadius": {
-                    "DEFAULT": "0.125rem",
-                    "lg": "0.25rem",
-                    "xl": "0.5rem",
-                    "full": "0.75rem"
-            },
-            "spacing": {
-                    "margin": "32px",
-                    "xl": "64px",
-                    "sm": "12px",
-                    "xs": "4px",
-                    "lg": "40px",
-                    "gutter": "16px",
-                    "md": "24px",
-                    "base": "8px"
-            },
-            "fontFamily": {
-                    "body-lg": ["Public Sans"],
-                    "label-sm": ["Public Sans"],
-                    "label-md": ["Public Sans"],
-                    "data-table": ["Public Sans"],
-                    "h1": ["Public Sans"],
-                    "h2": ["Public Sans"],
-                    "body-md": ["Public Sans"],
-                    "h3": ["Public Sans"],
-                    "body-sm": ["Public Sans"]
-            },
-            "fontSize": {
-                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
-                    "label-sm": ["12px", {"lineHeight": "1", "fontWeight": "500"}],
-                    "label-md": ["14px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
-                    "data-table": ["13px", {"lineHeight": "1.4", "fontWeight": "400"}],
-                    "h1": ["40px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
-                    "h2": ["32px", {"lineHeight": "1.25", "letterSpacing": "-0.01em", "fontWeight": "600"}],
-                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
-                    "h3": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
-                    "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}]
-            }
-          },
-        },
-      }
-    </script>
-<style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-    </style>
-<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="Dashboard"/>
+<meta name="page-sub" content="Overview & live analytics"/>
+<title>Dashboard — Attendance System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="db.js"></script>
+<script src="layout.js"></script>
 </head>
-<body class="bg-background font-body-md text-on-surface">
-<div class="flex min-h-screen">
-<!-- SideNavBar -->
-<aside class="bg-slate-50 h-screen w-64 border-r sticky top-0 flex flex-col py-6">
-<div class="px-6 mb-8 flex items-center gap-3">
-<div class="w-10 h-10 bg-primary-container rounded flex items-center justify-center">
-<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">school</span>
-</div>
-<div>
-<h1 class="font-bold text-[#0F172A] uppercase tracking-wider text-label-md">Admin Portal</h1>
-<p class="text-xs text-slate-500 font-medium">Department of Registrar</p>
-</div>
-</div>
-<nav class="flex-1 space-y-1">
-<a class="bg-white text-[#0F172A] border-r-4 border-[#0F172A] font-bold px-6 py-3 flex items-center gap-3 transition-all" href="dashboard.html">
-<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
-<span class="font-label-md text-label-md">Dashboard</span>
-</a>
-<a class="text-slate-600 px-6 py-3 flex items-center gap-3 hover:text-[#0F172A] hover:bg-slate-100 transition-all" href="attendance.html">
-<span class="material-symbols-outlined" data-icon="list_alt">list_alt</span>
-<span class="font-label-md text-label-md">Attendance Log</span>
-</a>
-<a class="text-slate-600 px-6 py-3 flex items-center gap-3 hover:text-[#0F172A] hover:bg-slate-100 transition-all" href="students.html">
-<span class="material-symbols-outlined" data-icon="group">group</span>
-<span class="font-label-md text-label-md">Student Management</span>
-</a>
-<a class="text-slate-600 px-6 py-3 flex items-center gap-3 hover:text-[#0F172A] hover:bg-slate-100 transition-all" href="recognition.html">
-<span class="material-symbols-outlined" data-icon="face">face</span>
-<span class="font-label-md text-label-md">Recognition Interface</span>
-</a>
-</nav>
-<div class="mt-auto px-6 border-t border-slate-200 pt-6">
-<a class="text-slate-600 py-3 flex items-center gap-3 hover:text-error transition-all" data-logout href="#"><span class="material-symbols-outlined" data-icon="logout">logout</span>
-<span class="font-label-md text-label-md">Log Out</span>
-</a>
-</div>
-</aside>
-<!-- Main Content Canvas -->
-<main class="flex-1 flex flex-col min-w-0">
-<!-- TopNavBar -->
-<header class="bg-white text-slate-900 font-['Public_Sans'] text-sm antialiased border-b border-slate-200 flex items-center justify-between px-8 h-16 w-full z-40 sticky top-0">
-<div class="flex items-center gap-6 flex-1">
-<div class="relative w-full max-w-md">
-<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" data-icon="search">search</span>
-<input class="w-full bg-slate-50 border-none rounded-lg pl-10 py-2 focus:ring-1 focus:ring-primary-container text-sm" placeholder="Search student records..." type="text"/>
-</div>
-</div>
-<div class="flex items-center gap-4">
-<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-50 transition-colors">
-<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
-</button>
-<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-50 transition-colors">
-<span class="material-symbols-outlined" data-icon="settings">settings</span>
-</button>
-<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-50 transition-colors">
-<span class="material-symbols-outlined" data-icon="help">help</span>
-</button>
-<div class="h-8 w-px bg-slate-200 mx-2"></div>
-<div class="flex items-center gap-3">
-<div class="text-right">
-<p class="text-sm font-bold text-slate-900 leading-tight">Admin User</p>
-<p class="text-[10px] text-slate-500 font-medium">Registrar Office</p>
-</div>
-<img alt="Administrator Profile" class="w-10 h-10 rounded-full border-2 border-slate-100" data-alt="professional portrait of a middle aged male university administrator with clean glasses and a warm smile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVir523eZv1VTfrcYpMpIeGChrISJ5v2x8XONetemiz5UlzBqcIWNAJ7WEGYRNR-omuktwEBdmgGgtKS25h5kSTSGA6hGHb4PdiEQct_XfgRJAIbKNOSHURZltvG1h3O8MGDyBrH_tKLFu6r5RiW087ZGaavOcmbhFy4flQZvLbqMNxhIHmsvlJLQ1cfpXTh6IOchsVqiRjVhEibxU2ee3g5ZwhHDzQL-EI38-8Cv_o1eix24xbLiXLc2JF0S_mJtUxCDXgLbabfxl"/>
-</div>
-</div>
-</header>
-<!-- Dashboard Content -->
-<div class="p-base md:p-8 space-y-gutter overflow-y-auto">
-<!-- Page Breadcrumbs -->
-<nav class="flex items-center gap-2 mb-6">
-<span class="text-label-sm font-label-sm text-slate-400">University</span>
-<span class="material-symbols-outlined text-[14px] text-slate-300">chevron_right</span>
-<span class="text-label-sm font-label-sm text-slate-400">Engineering College</span>
-<span class="material-symbols-outlined text-[14px] text-slate-300">chevron_right</span>
-<span class="text-label-sm font-label-sm text-slate-900 font-bold">Dashboard Overview</span>
-</nav>
-<!-- Bento Summary Cards -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
-<div class="bg-white p-6 border border-slate-200 rounded-lg flex flex-col justify-between">
-<div class="flex justify-between items-start">
-<div>
-<p class="text-label-sm font-label-sm text-slate-500 uppercase tracking-wider mb-1">Total Students</p>
-<h2 id="kpi-total" class="text-h2 font-h2 text-[#0F172A]">—</h2>
-</div>
-<div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-<span class="material-symbols-outlined" data-icon="groups">groups</span>
-</div>
-</div>
-<div class="mt-4 flex items-center gap-1">
-<span class="text-[11px] font-bold text-emerald-600 flex items-center"><span class="material-symbols-outlined text-xs">trending_up</span> 12%</span>
-<span class="text-[11px] text-slate-400">vs last semester</span>
-</div>
-</div>
-<div class="bg-white p-6 border border-slate-200 rounded-lg flex flex-col justify-between">
-<div class="flex justify-between items-start">
-<div>
-<p class="text-label-sm font-label-sm text-slate-500 uppercase tracking-wider mb-1">Present Today</p>
-<h2 id="kpi-present" class="text-h2 font-h2 text-[#0F172A]">—</h2>
-</div>
-<div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
-</div>
-</div>
-<div class="mt-4">
-<div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-<div id="kpi-present-bar" class="bg-emerald-500 h-full" style="width:0%"></div>
-</div>
-<p id="kpi-present-pct" class="text-[11px] text-slate-400 mt-2">—</p>
-</div>
-</div>
-<div class="bg-white p-6 border border-slate-200 rounded-lg flex flex-col justify-between">
-<div class="flex justify-between items-start">
-<div>
-<p class="text-label-sm font-label-sm text-slate-500 uppercase tracking-wider mb-1">Late Arrivals</p>
-<h2 id="kpi-late" class="text-h2 font-h2 text-[#0F172A]">—</h2>
-</div>
-<div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
-</div>
-</div>
-<div class="mt-4 flex items-center gap-1">
-<span class="text-[11px] font-bold text-amber-600 flex items-center"><span class="material-symbols-outlined text-xs">warning</span> High Volume</span>
-<span class="text-[11px] text-slate-400">Main Entrance A</span>
-</div>
-</div>
-<div class="bg-white p-6 border border-slate-200 rounded-lg flex flex-col justify-between">
-<div class="flex justify-between items-start">
-<div>
-<p class="text-label-sm font-label-sm text-slate-500 uppercase tracking-wider mb-1">System Status</p>
-<h2 class="text-h3 font-h3 text-emerald-600">Optimal</h2>
-</div>
-<div class="w-10 h-10 rounded-lg bg-slate-900 text-white flex items-center justify-center">
-<span class="material-symbols-outlined" data-icon="lan">lan</span>
-</div>
-</div>
-<div class="mt-4 flex items-center gap-2">
-<span class="relative flex h-2 w-2">
-<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-</span>
-<p id="kpi-terminals" class="text-[11px] text-slate-400">—</p>
-</div>
-</div>
-</div>
-<!-- Main Grid Layout -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
-<!-- Trend Chart Area -->
-<div class="lg:col-span-2 bg-white border border-slate-200 rounded-lg overflow-hidden flex flex-col">
-<div class="p-6 border-b border-slate-100 flex items-center justify-between">
-<div>
-<h3 class="font-h3 text-h3 text-slate-900">Today's Attendance Trend</h3>
-<p class="text-body-sm text-slate-500">Hourly student check-ins across all terminals</p>
-</div>
-<div class="flex gap-2">
-<button class="px-4 py-1.5 border border-slate-200 rounded text-label-sm font-label-sm hover:bg-slate-50">Filter</button>
-<button class="px-4 py-1.5 bg-[#0F172A] text-white rounded text-label-sm font-label-sm">Export</button>
-</div>
-</div>
-<div class="p-6 flex-1 flex flex-col justify-end min-h-[300px] relative">
-<!-- Simulated Chart Visual -->
-<div id="trend-chart" class="absolute inset-x-6 top-4 bottom-16 flex items-end justify-between gap-1">
-
-</div>
-</div>
-<!-- Recent Identifications -->
-<div class="bg-white border border-slate-200 rounded-lg flex flex-col h-[500px]">
-<div class="p-6 border-b border-slate-100">
-<h3 class="font-h3 text-h3 text-slate-900">Recent Logs</h3>
-<p class="text-body-sm text-slate-500">Live facial recognition feed</p>
-</div>
-<div id="recent-logs" class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
-
-<div class="flex-1 min-w-0">
-<p class="text-sm font-bold text-slate-900 truncate">Ethan Smith</p>
-<p class="text-[11px] text-slate-500">Terminal North-A • CS-101</p>
-</div>
-<div class="text-right">
-<p class="text-[11px] font-bold text-slate-900">09:12 AM</p>
-<p class="text-[10px] text-emerald-600 font-medium">Verified</p>
-</div>
-</div>
-
-<div class="flex-1 min-w-0">
-<p class="text-sm font-bold text-slate-900 truncate">Mia Wong</p>
-<p class="text-[11px] text-slate-500">Terminal West-C • MATH-203</p>
-</div>
-<div class="text-right">
-<p class="text-[11px] font-bold text-slate-900">09:10 AM</p>
-<p class="text-[10px] text-emerald-600 font-medium">Verified</p>
-</div>
-</div>
-
-<div class="flex-1 min-w-0">
-<p class="text-sm font-bold text-slate-900 truncate">Liam Johnson</p>
-<p class="text-[11px] text-slate-500">Terminal North-A • PHY-110</p>
-</div>
-<div class="text-right">
-<p class="text-[11px] font-bold text-slate-900">09:08 AM</p>
-<p class="text-[10px] text-amber-600 font-medium">Late (+18m)</p>
-</div>
-</div>
-
-<div class="flex-1 min-w-0">
-<p class="text-sm font-bold text-slate-900 truncate">Chloe Davis</p>
-<p class="text-[11px] text-slate-500">Terminal East-B • HIST-101</p>
-</div>
-<div class="text-right">
-<p class="text-[11px] font-bold text-slate-900">09:05 AM</p>
-<p class="text-[10px] text-emerald-600 font-medium">Verified</p>
-</div>
-</div>
-</div>
-<div class="p-4 border-t border-slate-100 text-center">
-<button class="text-label-sm font-label-sm text-[#0F172A] hover:underline">View Full Log History</button>
-</div>
-</div>
-</div>
-<!-- Departmental Attendance Table -->
-<div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
-<div class="p-6 border-b border-slate-100 flex items-center justify-between">
-<h3 class="font-h3 text-h3 text-slate-900">Department Overview</h3>
-<div class="flex items-center gap-2">
-<span class="text-label-sm font-label-sm text-slate-400">Sort by:</span>
-<select class="border-none bg-slate-50 rounded-md py-1 text-label-sm font-label-sm focus:ring-0">
-<option>Attendance %</option>
-<option>Student Count</option>
-</select>
-</div>
-</div>
-<div class="overflow-x-auto">
-<table class="w-full text-left font-data-table text-data-table">
-<thead>
-
-</thead>
-<tbody id="dept-table-body" class="divide-y divide-slate-100">
-
-
-
-
-</tbody>
-</table>
-</div>
-</div>
-</div>
-</main>
-</div>
+<body>
 <script>
-// Auth guard
-Auth.require(['admin','hod','faculty']);
-Auth.fillNavbar();
+const user = App.init(['admin','hod','faculty']);
+const rc   = App.ROLE_CONFIG[user?.role] || App.ROLE_CONFIG.admin;
+const deptF= user?.role==='admin' ? null : user?.dept;
 
-// Wire logout button in sidebar
-document.querySelectorAll('[data-logout]').forEach(el => el.addEventListener('click', () => Auth.logout()));
+function render() {
+  const stats = DB.getStats(deptF);
+  const pct   = stats.total ? Math.round(stats.present/stats.total*100) : 0;
 
-async function loadDashboard() {
-  try {
-    const res  = await Auth.fetch('/api/stats');
-    if (!res) return;
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-    const data = json.data;
+  document.getElementById('page-content').innerHTML = `
+  <div style="max-width:1400px">
 
-    const set = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
-    set('kpi-total',    data.totalStudents.toLocaleString());
-    set('kpi-present',  data.presentToday.toLocaleString());
-    set('kpi-late',     data.lateToday);
-    set('kpi-terminals',data.onlineTerminals + ' Active Terminals');
+    <!-- Welcome banner -->
+    <div style="background:linear-gradient(135deg,${rc.color} 0%,${rc.color}cc 100%);border-radius:20px;padding:24px 28px;color:white;margin-bottom:24px;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-20px;top:-20px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.08)"></div>
+      <div style="position:absolute;right:60px;bottom:-40px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
+      <p style="font-size:13px;opacity:.8;margin-bottom:4px">Good ${getGreeting()}, ${user.name.split(' ')[0]} 👋</p>
+      <h2 style="font-size:22px;font-weight:800;margin:0">${rc.label} Portal</h2>
+      ${deptF?`<p style="font-size:12px;opacity:.7;margin-top:4px">${deptF}</p>`:'<p style="font-size:12px;opacity:.7;margin-top:4px">All Departments</p>'}
+      <div style="display:flex;gap:16px;margin-top:16px;flex-wrap:wrap">
+        <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 18px">
+          <p style="font-size:22px;font-weight:800;margin:0">${stats.total}</p>
+          <p style="font-size:11px;opacity:.8;margin:0">Total Students</p>
+        </div>
+        <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 18px">
+          <p style="font-size:22px;font-weight:800;margin:0">${stats.present}</p>
+          <p style="font-size:11px;opacity:.8;margin:0">Present Today</p>
+        </div>
+        <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 18px">
+          <p style="font-size:22px;font-weight:800;margin:0">${pct}%</p>
+          <p style="font-size:11px;opacity:.8;margin:0">Attendance Rate</p>
+        </div>
+      </div>
+    </div>
 
-    const pct = data.totalStudents ? Math.round(data.presentToday/data.totalStudents*100) : 0;
-    set('kpi-present-pct', pct + '% of total enrollment');
-    const bar = document.getElementById('kpi-present-bar');
-    if (bar) bar.style.width = pct + '%';
+    <!-- KPI cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+      ${kpiCard('Total Students', stats.total, 'group', '#3b82f6', `+${Math.floor(Math.random()*5)+2} this month`)}
+      ${kpiCard('Present Today', stats.present, 'check_circle', '#10b981', `${pct}% of enrolled`)}
+      ${kpiCard('Late Arrivals', stats.late, 'schedule', '#f59e0b', 'Today')}
+      ${kpiCard('Absent Today', stats.total-stats.present-stats.late, 'cancel', '#ef4444', 'Need follow-up')}
+      ${user.role==='admin' ? kpiCard('Active Terminals', stats.terminals, 'sensors', '#8b5cf6', '1 offline') : ''}
+      ${user.role==='admin' ? kpiCard('Enrolled (Bio)', DB.getStudents({bio:'Enrolled'}).total, 'face_retouching_natural', '#06b6d4', 'Face data ready') : ''}
+    </div>
 
-    // Trend chart
-    const chartEl = document.getElementById('trend-chart');
-    if (chartEl) {
-      if (data.hourlyTrend.length > 0) {
-        const maxC = Math.max(...data.hourlyTrend.map(h=>h.count), 1);
-        chartEl.innerHTML = data.hourlyTrend.map(h => {
-          const hp = Math.round(h.count/maxC*100);
-          return `<div class="flex flex-col items-center flex-1 gap-1">
-            <span class="text-[9px] text-slate-400 font-bold">${h.count}</span>
-            <div class="w-full bg-slate-900 rounded-t-sm" style="height:${hp}%"></div>
-            <span class="text-[9px] text-slate-400 font-bold">${h.hour}:00</span>
-          </div>`;
-        }).join('');
-      } else {
-        chartEl.innerHTML = '<p class="text-slate-400 text-sm m-auto">No check-ins today yet.</p>';
-      }
-    }
+    <!-- Charts row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px" class="charts-grid">
 
-    // Recent logs
-    const logsEl = document.getElementById('recent-logs');
-    if (logsEl) {
-      logsEl.innerHTML = !data.recentLogs.length
-        ? '<p class="text-slate-400 text-sm text-center py-4">No recent activity.</p>'
-        : data.recentLogs.map(log => {
-            const time = new Date(log.checkIn).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-            const ok   = log.status === 'Present';
-            const s    = log.student || {};
-            return `<div class="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-              <div class="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 text-sm relative">
-                ${s.avatar||'??'}
-                <div class="absolute -bottom-1 -right-1 w-5 h-5 ${ok?'bg-emerald-500':'bg-amber-500'} border-2 border-white rounded-full flex items-center justify-center">
-                  <span class="material-symbols-outlined text-[10px] text-white" style="font-variation-settings:'wght' 700;">${ok?'check':'schedule'}</span>
+      <!-- Hourly trend -->
+      <div class="card" style="padding:20px">
+        <div style="display:flex;align-items:center;justify-content:between;margin-bottom:16px">
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">Today's Check-in Trend</h3>
+            <p style="font-size:12px;color:#94a3b8;margin:2px 0 0">Hourly distribution</p>
+          </div>
+        </div>
+        <div id="trend-chart" style="height:140px"></div>
+      </div>
+
+      <!-- Dept breakdown -->
+      <div class="card" style="padding:20px">
+        <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0 0 4px">Department Overview</h3>
+        <p style="font-size:12px;color:#94a3b8;margin:0 0 14px">Attendance rate by department</p>
+        <div style="space-y:8px">
+          ${stats.depts.slice(0,5).map(d => {
+            const r = d.total ? Math.round(d.present/d.total*100) : 0;
+            const c = r>=85?'#10b981':r>=70?'#f59e0b':'#ef4444';
+            return `<div style="margin-bottom:10px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                <span style="font-size:12px;font-weight:600;color:#374151">${d.dept.replace(' Engineering','').replace('Computer ','CS')}</span>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:11px;color:#64748b">${d.present}/${d.total}</span>
+                  <span style="font-size:12px;font-weight:700;color:${c}">${r}%</span>
                 </div>
               </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-bold text-slate-900 truncate">${s.name||'—'}</p>
-                <p class="text-[11px] text-slate-500">${log.terminal||'Terminal'} • ${s.course||'—'}</p>
-              </div>
-              <div class="text-right">
-                <p class="text-[11px] font-bold text-slate-900">${time}</p>
-                <p class="text-[10px] ${ok?'text-emerald-600':'text-amber-600'} font-medium">${log.status}</p>
+              <div style="height:6px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+                <div style="height:100%;background:${c};border-radius:99px;width:${r}%;transition:width 1s ease"></div>
               </div>
             </div>`;
-          }).join('');
-    }
+          }).join('')}
+        </div>
+      </div>
+    </div>
 
-    // Dept table
-    const deptEl = document.getElementById('dept-table-body');
-    if (deptEl) {
-      deptEl.innerHTML = data.departments.map((d,i) => {
-        const absent = d.registered - d.present;
-        const rate   = d.registered ? (d.present/d.registered*100).toFixed(1) : 0;
-        const color  = rate >= 85 ? 'bg-emerald-500' : 'bg-amber-500';
-        return `<tr class="${i%2?'bg-slate-50/30':''} hover:bg-slate-50">
-          <td class="px-6 py-4 font-bold text-slate-900">${d.department}</td>
-          <td class="px-6 py-4">${d.registered}</td>
-          <td class="px-6 py-4 text-emerald-600 font-bold">${d.present}</td>
-          <td class="px-6 py-4 text-red-600">${absent}</td>
-          <td class="px-6 py-4">
-            <div class="flex items-center gap-2">
-              <div class="w-24 bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                <div class="${color} h-full" style="width:${rate}%"></div>
+    <!-- Bottom row: Recent logs + Quick actions -->
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px" class="bottom-grid">
+
+      <!-- Recent logs -->
+      <div class="card" style="overflow:hidden">
+        <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:between">
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">Recent Check-ins</h3>
+            <p style="font-size:12px;color:#94a3b8;margin:2px 0 0">Live activity feed</p>
+          </div>
+          <a href="attendance.html" style="font-size:12px;color:#3b82f6;font-weight:600;text-decoration:none;margin-left:auto">View all →</a>
+        </div>
+        <div style="max-height:320px;overflow-y:auto">
+          ${stats.recentLogs.slice(0,8).map(log => {
+            const ok = log.status==='Present';
+            return `<div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #f8fafc;transition:background .15s" onmouseover="this.style.background='#fafbff'" onmouseout="this.style.background='white'">
+              <div style="width:38px;height:38px;border-radius:50%;background:${ok?'#dcfce7':'#fef3c7'};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:${ok?'#166534':'#92400e'};flex-shrink:0">${log.avatar||'??'}</div>
+              <div style="flex:1;min-width:0">
+                <p style="font-size:13px;font-weight:600;color:#1e293b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${log.stuName||'—'}</p>
+                <p style="font-size:11px;color:#94a3b8;margin:2px 0 0">${log.terminal||'Terminal'} · ${log.course||'—'}</p>
               </div>
-              <span class="font-bold">${rate}%</span>
-            </div>
-          </td>
-          <td class="px-6 py-4"></td>
-        </tr>`;
-      }).join('');
+              <div style="text-align:right;flex-shrink:0">
+                <div>${App.badgeHtml(log.status)}</div>
+                <p style="font-size:11px;color:#94a3b8;margin:3px 0 0">${App.formatTime(log.checkIn)}</p>
+              </div>
+            </div>`;
+          }).join('') || '<p style="text-align:center;padding:32px;color:#94a3b8;font-size:13px">No check-ins today yet</p>'}
+        </div>
+      </div>
+
+      <!-- Quick actions + attendance donut -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <!-- Donut -->
+        <div class="card" style="padding:20px;text-align:center">
+          <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 12px">Today's Rate</h3>
+          ${App.donut(pct, rc.color, 100)}
+          <p style="font-size:12px;color:#64748b;margin:8px 0 0">${stats.present} present of ${stats.total}</p>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="card" style="padding:20px">
+          <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 12px">Quick Actions</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${quickAction('face_unlock','Start Recognition','recognition.html',rc.color)}
+            ${quickAction('group','View Students','students.html','#64748b')}
+            ${quickAction('bar_chart','View Reports','reports.html','#64748b')}
+            ${user.role!=='faculty'?quickAction('face_retouching_natural','Enroll Face','enroll.html','#64748b'):''}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @media(max-width:768px){
+      .charts-grid{grid-template-columns:1fr!important}
+      .bottom-grid{grid-template-columns:1fr!important}
     }
-  } catch(e) { console.error('Dashboard error:', e); }
+  </style>`;
+
+  // Draw chart after DOM ready
+  if (stats.hourlyTrend.length) App.barChart('trend-chart', stats.hourlyTrend, rc.color);
+  else document.getElementById('trend-chart').innerHTML = '<p style="text-align:center;color:#94a3b8;font-size:12px;padding-top:50px">No check-ins today yet</p>';
 }
 
-loadDashboard();
-setInterval(loadDashboard, 30000);
+function kpiCard(label, value, icon, color, sub) {
+  return `<div class="stat-card">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between">
+      <div>
+        <p style="font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px">${label}</p>
+        <p style="font-size:28px;font-weight:800;color:#0f172a;margin:0;line-height:1">${value}</p>
+        <p style="font-size:11px;color:#94a3b8;margin:6px 0 0">${sub}</p>
+      </div>
+      <div style="width:44px;height:44px;border-radius:12px;background:${color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <span class="material-symbols-outlined" style="color:${color};font-size:22px">${icon}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function quickAction(icon, label, href, color) {
+  return `<a href="${href}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#f8fafc;text-decoration:none;transition:all .2s;border:1.5px solid #f1f5f9"
+    onmouseover="this.style.background='#eff6ff';this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc';this.style.borderColor='#f1f5f9'">
+    <span class="material-symbols-outlined" style="color:${color};font-size:20px">${icon}</span>
+    <span style="font-size:13px;font-weight:600;color:#374151">${label}</span>
+    <span class="material-symbols-outlined" style="margin-left:auto;color:#cbd5e1;font-size:16px">chevron_right</span>
+  </a>`;
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  return h<12?'morning':h<17?'afternoon':'evening';
+}
+
+render();
+setInterval(render, 30000);
 </script>
-</body></html>
+</body>
+</html>

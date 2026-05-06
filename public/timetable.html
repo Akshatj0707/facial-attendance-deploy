@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="Timetable"/><meta name="page-sub" content="Weekly class schedule"/>
+<title>Timetable</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="db.js"></script><script src="layout.js"></script>
+</head>
+<body>
+<script>
+const user = App.init();
+const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const today = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
+
+const TIMETABLES = {
+  'Computer Science': [
+    {day:'Monday',    time:'09:00–10:30',subject:'Data Structures',    code:'CS-201',room:'Lab B-203',faculty:'Prof. Amit Verma',type:'lab'},
+    {day:'Monday',    time:'11:00–12:00',subject:'Mathematics III',    code:'MA-301',room:'Room 101',  faculty:'Dr. Priya Mehta',  type:'lecture'},
+    {day:'Tuesday',   time:'09:00–10:00',subject:'Operating Systems',  code:'CS-301',room:'Room 205',  faculty:'Prof. Amit Verma', type:'lecture'},
+    {day:'Tuesday',   time:'02:00–03:30',subject:'DBMS Lab',           code:'CS-401',room:'Lab C-101', faculty:'Prof. Sneha Joshi',type:'lab'},
+    {day:'Wednesday', time:'10:00–11:00',subject:'Computer Networks',  code:'CS-401',room:'Room 301',  faculty:'Dr. Rahul Sharma', type:'lecture'},
+    {day:'Wednesday', time:'02:00–03:00',subject:'Software Engineering',code:'CS-501',room:'Room 210', faculty:'Prof. Amit Verma', type:'lecture'},
+    {day:'Thursday',  time:'09:00–10:30',subject:'OS Lab',             code:'CS-302',room:'Lab B-205', faculty:'Prof. Amit Verma', type:'lab'},
+    {day:'Thursday',  time:'11:00–12:00',subject:'Theory of Computation',code:'CS-601',room:'Room 102',faculty:'Dr. Rahul Sharma',type:'lecture'},
+    {day:'Friday',    time:'09:00–10:00',subject:'Data Structures',    code:'CS-201',room:'Room 205',  faculty:'Prof. Amit Verma', type:'lecture'},
+    {day:'Friday',    time:'02:00–04:00',subject:'Project Work',       code:'CS-701',room:'Lab D-101', faculty:'Dr. Rahul Sharma', type:'project'},
+  ],
+  'Electrical Engineering': [
+    {day:'Monday',    time:'09:00–10:00',subject:'Circuit Theory',     code:'EE-201',room:'Room 301',  faculty:'Dr. Priya Patel',  type:'lecture'},
+    {day:'Tuesday',   time:'10:00–11:30',subject:'Electronics Lab',    code:'EE-301',room:'Lab E-102', faculty:'Prof. Sneha Joshi',type:'lab'},
+    {day:'Wednesday', time:'09:00–10:00',subject:'Signals & Systems',  code:'EE-401',room:'Room 205',  faculty:'Dr. Priya Patel',  type:'lecture'},
+    {day:'Thursday',  time:'02:00–03:30',subject:'Power Systems Lab',  code:'EE-501',room:'Lab E-201', faculty:'Prof. Sneha Joshi',type:'lab'},
+    {day:'Friday',    time:'09:00–10:00',subject:'Microprocessors',    code:'EE-601',room:'Room 102',  faculty:'Dr. Priya Patel',  type:'lecture'},
+  ],
+};
+
+function render() {
+  const students = DB.getStudents({}).rows;
+  const stuRecord = students.find(s=>s.userId===user.id||s.email===user.email||s.stuId===user.stuId);
+  const dept = stuRecord?.dept || user.dept || 'Computer Science';
+  const schedule = TIMETABLES[dept] || TIMETABLES['Computer Science'];
+  const todayClasses = schedule.filter(c=>c.day===today);
+  const typeColors = {lecture:'#3b82f6',lab:'#10b981',project:'#8b5cf6',tutorial:'#f59e0b'};
+
+  document.getElementById('page-content').innerHTML = `
+  <div style="max-width:1100px">
+    <!-- Today's classes -->
+    ${todayClasses.length?`<div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="width:36px;height:36px;border-radius:10px;background:#dbeafe;display:flex;align-items:center;justify-content:center">
+          <span class="material-symbols-outlined" style="color:#3b82f6;font-size:20px">today</span>
+        </div>
+        <div>
+          <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Today — ${today}</h3>
+          <p style="font-size:12px;color:#94a3b8;margin:0">${todayClasses.length} class${todayClasses.length>1?'es':''} scheduled</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+        ${todayClasses.map(c=>classCard(c, typeColors, true)).join('')}
+      </div>
+    </div>`:''}
+
+    <!-- Full week -->
+    <div class="card" style="overflow:hidden">
+      <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
+        <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">Weekly Schedule — ${dept}</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${Object.entries(typeColors).map(([t,c])=>`<span style="background:${c}18;color:${c};padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;text-transform:capitalize">${t}</span>`).join('')}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(${days.length},1fr);border-right:1px solid #f1f5f9;overflow-x:auto">
+        ${days.map(day=>{
+          const dayClasses=schedule.filter(c=>c.day===day);
+          const isToday=day===today;
+          return `<div style="border-right:1px solid #f1f5f9;min-width:150px">
+            <div style="padding:12px 14px;border-bottom:1px solid #f1f5f9;text-align:center;background:${isToday?'#eff6ff':'#f8fafc'}">
+              <p style="font-size:12px;font-weight:700;color:${isToday?'#3b82f6':'#374151'};margin:0">${day}</p>
+              ${isToday?'<p style="font-size:10px;color:#3b82f6;margin:0;font-weight:600">TODAY</p>':''}
+            </div>
+            <div style="padding:8px;display:flex;flex-direction:column;gap:6px;min-height:200px">
+              ${dayClasses.length ? dayClasses.map(c=>`<div style="background:${typeColors[c.type]||'#3b82f6'}12;border-left:3px solid ${typeColors[c.type]||'#3b82f6'};border-radius:0 8px 8px 0;padding:8px 10px;cursor:pointer" title="${c.subject} - ${c.faculty}">
+                <p style="font-size:11px;font-weight:700;color:#0f172a;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.subject}</p>
+                <p style="font-size:10px;color:#64748b;margin:2px 0 0">${c.time}</p>
+                <p style="font-size:10px;color:#94a3b8;margin:1px 0 0">${c.room}</p>
+              </div>`).join('') : '<p style="font-size:11px;color:#cbd5e1;text-align:center;padding:20px 0">No classes</p>'}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function classCard(c, typeColors, highlight=false) {
+  const color = typeColors[c.type]||'#3b82f6';
+  const now = new Date();
+  const [startH] = c.time.split('–')[0].split(':').map(Number);
+  const isNow = now.getHours()===startH;
+  return `<div style="background:white;border-radius:14px;padding:16px;border:1.5px solid ${highlight&&isNow?color+'60':'#f1f5f9'};position:relative;overflow:hidden;box-shadow:${highlight&&isNow?'0 4px 20px '+color+'25':'none'}">
+    <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:${color}"></div>
+    <div style="padding-left:4px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="background:${color}18;color:${color};padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase">${c.type}</span>
+        ${isNow&&highlight?'<span style="background:#fee2e2;color:#ef4444;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;animation:pulse2 1s infinite">● NOW</span>':''}
+      </div>
+      <h4 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 4px">${c.subject}</h4>
+      <p style="font-size:11px;color:#94a3b8;margin:0 0 2px">${c.code}</p>
+      <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+        <span style="font-size:11px;color:#374151;display:flex;align-items:center;gap:3px"><span class="material-symbols-outlined" style="font-size:13px;color:#94a3b8">schedule</span>${c.time}</span>
+        <span style="font-size:11px;color:#374151;display:flex;align-items:center;gap:3px"><span class="material-symbols-outlined" style="font-size:13px;color:#94a3b8">room</span>${c.room}</span>
+      </div>
+      <p style="font-size:11px;color:#64748b;margin:6px 0 0;display:flex;align-items:center;gap:4px">
+        <span class="material-symbols-outlined" style="font-size:13px;color:#94a3b8">person</span>${c.faculty}
+      </p>
+    </div>
+  </div>`;
+}
+
+render();
+</script>
+<style>@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.4}}</style>
+</body>
+</html>
