@@ -98,7 +98,8 @@ const DB = (() => {
     login(email, pwd) {
       const users = load(KEYS.users)||[];
       const u = users.find(u=>u.email===email);
-      if (!u || !u.active) return null;
+      if (!u) return null;
+      if (u.active === false) return null; // inactive check
       const ok = u.pwd === btoa(pwd);
       if (!ok) return null;
       const {pwd:_,...safe} = u;
@@ -112,8 +113,9 @@ const DB = (() => {
       if (users.find(u=>u.email===data.email)) throw new Error('Email already registered');
       const id  = 'u'+nid('u');
       const av  = initials(data.name);
-      const u   = {id, avatar:av, pwd:btoa(data.pwd), active:true, ...data};
-      delete u.pwd_confirm;
+      const rawPwd = data.pwd||'';
+      const {pwd:_, pwd_confirm:__, ...rest} = data;
+      const u   = {id, avatar:av, active:true, ...rest, pwd:btoa(rawPwd)};
       users.push(u); store(KEYS.users, users);
       if (data.role==='student' && data.stuId) {
         const students = load(KEYS.students)||[];
