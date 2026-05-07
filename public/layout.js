@@ -18,6 +18,7 @@ const App = {
       { href:'users.html',      icon:'manage_accounts',      label:'User Management' },
       { href:'announcements.html',icon:'campaign',           label:'Announcements' },
       { href:'settings.html',   icon:'settings',             label:'Settings' },
+      { href:'database.html',  icon:'storage',              label:'Database Schema' },
     ],
     hod: [
       { href:'dashboard.html',  icon:'dashboard',           label:'Dashboard' },
