@@ -3,250 +3,456 @@
 <head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="page-title" content="Face Recognition"/><meta name="page-sub" content="Live camera attendance marking"/>
-<title>Recognition — Attendance System</title>
+<title>Recognition</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 <script src="db.js"></script><script src="layout.js"></script>
+<style>
+*{font-family:'Inter',sans-serif;box-sizing:border-box}
+@keyframes pulse-green{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.4)}70%{box-shadow:0 0 0 10px rgba(16,185,129,0)}}
+@keyframes scan2{0%{top:5%}100%{top:95%}}
+@keyframes fade-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes rotate-ring{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.result-card{animation:fade-in .4s ease}
+.live-badge{animation:pulse-green 2s infinite}
+</style>
 </head>
 <body>
 <script>
 const user  = App.init(['admin','hod','faculty']);
-const deptF = user?.role==='admin' ? null : user?.dept;
-let stream=null, detectLoop=null, modelsLoaded=false, capturing=false, frameCount=0, lastFps=Date.now();
-const $=id=>document.getElementById(id);
+const deptF = user?.role==='admin'?null:user?.dept;
+const isAdmin = user?.role==='admin';
 
-function render() {
-  document.getElementById('page-content').innerHTML = `
-  <div style="max-width:1200px">
-    <div style="display:grid;grid-template-columns:3fr 2fr;gap:20px;align-items:start" class="rec-grid">
+let stream=null, detectLoop=null, modelsLoaded=false, capturing=false;
+let frameCount=0, lastFps=Date.now(), faceDetected=false;
+let recognitionHistory=[];
 
-      <!-- Camera -->
+function render(){
+  const enrolledCount = Object.keys(DB.getAllFaceData()).length;
+  const todayAtt = DB.getAttendance({date:new Date().toISOString().split('T')[0], dept:deptF||undefined, limit:999}).total;
+
+  document.getElementById('page-content').innerHTML=`
+  <div style="max-width:1300px">
+
+    <!-- Top status bar -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">
+      ${topStat('Enrolled Students', enrolledCount, '#10b981','face_retouching_natural','Ready for recognition')}
+      ${topStat('Marked Today', todayAtt, '#3b82f6','check_circle','Attendance records today')}
+      ${topStat('This Session', recognitionHistory.length, '#8b5cf6','history','Recognitions since page load')}
+      ${topStat('Active Terminals', DB.getTerminals().filter(t=>t.status==='Online').length, '#f59e0b','sensors','Online terminals')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:3fr 2fr;gap:20px;align-items:start" class="rec-main-grid">
+
+      <!-- LEFT: Camera -->
       <div>
         <div class="card" style="overflow:hidden">
-          <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px">
-            <div style="width:10px;height:10px;border-radius:50%;background:#10b981;animation:pulse2 1.5s infinite" id="live-dot"></div>
-            <span style="font-size:13px;font-weight:700;color:#0f172a" id="cam-status-txt">Camera Ready</span>
-            <div style="margin-left:auto;display:flex;gap:12px">
+          <!-- Header -->
+          <div style="padding:12px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div id="live-dot" style="width:10px;height:10px;border-radius:50%;background:#94a3b8;flex-shrink:0"></div>
+            <span id="cam-status" style="font-size:13px;font-weight:700;color:#0f172a">Camera Ready</span>
+            <div style="margin-left:auto;display:flex;gap:14px;align-items:center">
               <span id="cam-fps" style="font-size:11px;color:#94a3b8;font-family:monospace">FPS: —</span>
-              <span id="cam-res" style="font-size:11px;color:#94a3b8;font-family:monospace">—</span>
+              <span id="cam-res" style="font-size:11px;color:#94a3b8;font-family:monospace;display:none" class="hidden sm:inline"></span>
+              ${enrolledCount===0?`<a href="enroll.html" style="font-size:11px;background:#fee2e2;color:#ef4444;padding:4px 10px;border-radius:7px;font-weight:700;text-decoration:none">⚠ No students enrolled</a>`:''}
             </div>
           </div>
+
+          <!-- Video -->
           <div style="position:relative;background:#0f172a;aspect-ratio:16/9;overflow:hidden">
             <div id="cam-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
-              <div style="width:100px;height:100px;border-radius:50%;border:3px dashed #334155;display:flex;align-items:center;justify-content:center;animation:breathe 2s ease-in-out infinite">
-                <span class="material-symbols-outlined" style="font-size:48px;color:#475569">face_unlock</span>
+              <div style="position:relative;width:100px;height:100px">
+                <div style="position:absolute;inset:0;border-radius:50%;border:3px solid transparent;border-top-color:#3b82f6;animation:rotate-ring 1.5s linear infinite"></div>
+                <div style="position:absolute;inset:8px;border-radius:50%;border:2px dashed #334155;display:flex;align-items:center;justify-content:center">
+                  <span class="material-symbols-outlined" style="font-size:36px;color:#475569">face_unlock</span>
+                </div>
               </div>
-              <p style="color:#475569;font-size:13px;margin:0">Click Start to begin recognition</p>
-              <button onclick="startCamera()" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:white;border:none;padding:10px 24px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+              <div style="text-align:center">
+                <p style="color:#64748b;font-size:13px;margin:0;font-weight:600">Ready for Face Recognition</p>
+                <p style="color:#475569;font-size:11px;margin:4px 0 0">${enrolledCount} student${enrolledCount!==1?'s':''} enrolled</p>
+              </div>
+              <button onclick="startCam()" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:white;border:none;padding:11px 26px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(59,130,246,.35)">
                 <span class="material-symbols-outlined" style="font-size:18px">videocam</span>Start Camera
               </button>
             </div>
-            <video id="cam-video" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;display:none;transform:scaleX(-1)"></video>
-            <canvas id="cam-canvas" style="position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);display:none;pointer-events:none"></canvas>
-            <div id="scan-line" style="display:none;position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#3b82f6,transparent);animation:scan 2s linear infinite"></div>
-            <div id="capture-flash" style="position:absolute;inset:0;background:white;opacity:0;pointer-events:none;transition:opacity .1s"></div>
+
+            <video id="cam-vid" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;display:none;transform:scaleX(-1)"></video>
+            <canvas id="cam-cvs" style="position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);display:none;pointer-events:none"></canvas>
+
+            <!-- Scanning line -->
+            <div id="scan-ln" style="display:none;position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#3b82f6,transparent);animation:scan2 2.5s linear infinite"></div>
+
             <!-- Detection pill -->
-            <div id="detect-pill" style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,.75);border-radius:20px;padding:5px 12px;display:none;backdrop-filter:blur(4px)">
-              <div style="display:flex;align-items:center;gap:6px">
-                <div id="detect-dot" style="width:7px;height:7px;border-radius:50%;background:#10b981;animation:pulse2 1s infinite"></div>
-                <span id="detect-txt" style="color:white;font-size:11px;font-weight:600">SCANNING</span>
+            <div id="detect-pill" style="display:none;position:absolute;top:12px;left:12px;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);border-radius:20px;padding:5px 14px">
+              <div style="display:flex;align-items:center;gap:7px">
+                <div id="detect-dot" style="width:7px;height:7px;border-radius:50%;background:#10b981;transition:background .3s"></div>
+                <span id="detect-txt" style="color:white;font-size:11px;font-weight:700">SCANNING</span>
               </div>
             </div>
+
+            <!-- Confidence meter -->
+            <div id="conf-meter" style="display:none;position:absolute;bottom:12px;left:12px;right:12px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span style="color:white;font-size:10px;font-weight:600">DETECTION</span>
+                <span id="conf-val" style="color:white;font-size:10px;font-weight:700">0%</span>
+              </div>
+              <div style="height:4px;background:rgba(255,255,255,.2);border-radius:99px;overflow:hidden">
+                <div id="conf-bar" style="height:100%;background:#10b981;border-radius:99px;width:0%;transition:width .3s"></div>
+              </div>
+            </div>
+
+            <div id="cap-flash" style="position:absolute;inset:0;background:white;opacity:0;pointer-events:none;transition:opacity .1s"></div>
           </div>
+
           <!-- Controls -->
-          <div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;background:#fafbff">
-            <button id="btn-start" onclick="startCamera()" class="btn btn-primary" style="font-size:12px">
+          <div style="padding:12px 14px;display:flex;gap:8px;flex-wrap:wrap;background:#fafbff;align-items:center">
+            <button id="btn-start" onclick="startCam()" class="btn btn-primary" style="font-size:12px">
               <span class="material-symbols-outlined" style="font-size:16px">videocam</span>Start
             </button>
-            <button id="btn-capture" onclick="captureAndRecognize()" disabled class="btn" style="background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:12px">
+            <button id="btn-rec" onclick="captureAndRecognize()" disabled class="btn" style="background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:12px;font-weight:700">
               <span class="material-symbols-outlined" style="font-size:16px">face_unlock</span>Recognize &amp; Mark
             </button>
-            <button id="btn-stop" onclick="stopCamera()" disabled class="btn btn-secondary" style="font-size:12px">
+            <button id="btn-auto-rec" onclick="toggleAutoRec()" disabled class="btn btn-secondary" style="font-size:12px">
+              <span class="material-symbols-outlined" style="font-size:16px">play_circle</span>Auto Mode
+            </button>
+            <button id="btn-stop" onclick="stopCam()" disabled class="btn btn-secondary" style="font-size:12px">
               <span class="material-symbols-outlined" style="font-size:16px">videocam_off</span>Stop
             </button>
-            <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-              <span style="font-size:12px;color:#64748b">Space to capture</span>
-            </div>
+            <div style="margin-left:auto;font-size:11px;color:#64748b;background:#f1f5f9;padding:5px 10px;border-radius:8px">Space = Recognize</div>
+          </div>
+        </div>
+
+        <!-- Session log -->
+        <div class="card" style="margin-top:14px;overflow:hidden">
+          <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
+            <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0">
+              <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:6px;animation:pulse-green 2s infinite"></span>
+              Live Session Log
+            </h3>
+            <button onclick="recognitionHistory=[];renderSessionLog()" style="font-size:11px;color:#94a3b8;border:none;background:none;cursor:pointer">Clear</button>
+          </div>
+          <div id="session-log" style="max-height:180px;overflow-y:auto;min-height:60px">
+            <p style="text-align:center;padding:20px;color:#94a3b8;font-size:12px">No recognitions yet this session</p>
           </div>
         </div>
       </div>
 
-      <!-- Right panel -->
-      <div style="display:flex;flex-direction:column;gap:16px">
-        <!-- Result card -->
-        <div class="card" style="padding:20px">
-          <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 14px;display:flex;align-items:center;gap:6px">
-            <span class="material-symbols-outlined" style="font-size:18px;color:#3b82f6">verified_user</span>Recognition Result
-          </h3>
-          <div id="result-card" style="text-align:center;padding:20px 0">
-            <div style="width:70px;height:70px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
-              <span class="material-symbols-outlined" style="font-size:36px;color:#cbd5e1">person_search</span>
-            </div>
-            <p style="font-size:13px;color:#94a3b8;margin:0">Waiting for recognition…</p>
+      <!-- RIGHT: Result + terminals + recent -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- Result panel -->
+        <div class="card" style="overflow:hidden">
+          <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9">
+            <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0;display:flex;align-items:center;gap:7px">
+              <span class="material-symbols-outlined" style="font-size:18px;color:#3b82f6">verified_user</span>Last Recognition
+            </h3>
           </div>
+          <div id="result-panel" style="padding:24px;text-align:center">
+            <div style="width:64px;height:64px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
+              <span class="material-symbols-outlined" style="font-size:32px;color:#cbd5e1">person_search</span>
+            </div>
+            <p style="color:#94a3b8;font-size:13px;margin:0">Waiting for recognition…</p>
+          </div>
+        </div>
+
+        <!-- Enrolled students list -->
+        <div class="card" style="overflow:hidden">
+          <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
+            <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0;display:flex;align-items:center;gap:7px">
+              <span class="material-symbols-outlined" style="font-size:18px;color:#10b981">face_retouching_natural</span>
+              Enrolled (${enrolledCount})
+            </h3>
+            <a href="enroll.html" style="font-size:11px;color:#3b82f6;font-weight:600;text-decoration:none">+ Add →</a>
+          </div>
+          <div id="enrolled-panel" style="max-height:200px;overflow-y:auto"></div>
         </div>
 
         <!-- Terminals -->
-        <div class="card" style="padding:20px">
-          <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 12px;display:flex;align-items:center;gap:6px">
-            <span class="material-symbols-outlined" style="font-size:18px;color:#8b5cf6">sensors</span>Active Terminals
+        <div class="card" style="padding:16px">
+          <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 10px;display:flex;align-items:center;gap:7px">
+            <span class="material-symbols-outlined" style="font-size:18px;color:#8b5cf6">sensors</span>Terminals
           </h3>
-          <div id="terminal-list" style="display:flex;flex-direction:column;gap:6px"></div>
-        </div>
-
-        <!-- Live feed -->
-        <div class="card" style="padding:20px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0;display:flex;align-items:center;gap:6px">
-              <span class="material-symbols-outlined" style="font-size:18px;color:#10b981">monitoring</span>Live Feed
-            </h3>
-            <span style="font-size:10px;color:#94a3b8;font-weight:600;animation:pulse2 2s infinite">● LIVE</span>
-          </div>
-          <div id="live-feed" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto"></div>
+          <div id="terminals" style="display:flex;flex-direction:column;gap:6px"></div>
         </div>
       </div>
     </div>
   </div>
   <style>
-    @keyframes scan{0%{top:0}100%{top:100%}}
-    @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-    @keyframes pulse2{0%,100%{opacity:1}50%{opacity:.4}}
-    @media(max-width:768px){.rec-grid{grid-template-columns:1fr!important}}
+    @media(max-width:900px){.rec-main-grid{grid-template-columns:1fr!important}}
+    @media(max-width:640px){.btn span.material-symbols-outlined+span{display:none}}
   </style>`;
-  loadTerminals(); loadFeed(); loadModels();
+
+  renderEnrolled(); renderTerminals(); renderSessionLog();
+  loadModels();
 }
 
-async function loadModels() {
-  try {
+function topStat(label,val,color,icon,sub){
+  return `<div style="background:white;border-radius:14px;padding:14px 16px;border:1px solid #f1f5f9;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+    <div style="width:40px;height:40px;border-radius:12px;background:${color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <span class="material-symbols-outlined" style="color:${color};font-size:20px">${icon}</span>
+    </div>
+    <div><p style="font-size:22px;font-weight:800;color:#0f172a;margin:0;line-height:1">${val}</p>
+    <p style="font-size:11px;color:#64748b;margin:2px 0 0;font-weight:600">${label}</p></div>
+  </div>`;
+}
+
+function renderEnrolled(){
+  const el=document.getElementById('enrolled-panel'); if(!el) return;
+  const fd=DB.getAllFaceData();
+  const enrolled=DB.getStudents({bio:'Enrolled'}).rows.filter(s=>fd[s.id]);
+  if(!enrolled.length){
+    el.innerHTML=`<div style="text-align:center;padding:20px">
+      <p style="font-size:12px;color:#94a3b8;margin:0">No students enrolled yet</p>
+      <a href="enroll.html" style="display:inline-block;margin-top:8px;font-size:12px;color:#3b82f6;font-weight:600;text-decoration:none">→ Go to Enrollment</a>
+    </div>`; return;
+  }
+  el.innerHTML=enrolled.map(s=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #f8fafc">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:9px;flex-shrink:0">${s.avatar}</div>
+      <div style="flex:1;overflow:hidden">
+        <p style="font-size:12px;font-weight:600;color:#1e293b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</p>
+        <p style="font-size:10px;color:#94a3b8;margin:0">${s.stuId}</p>
+      </div>
+      <span style="font-size:9px;background:#dcfce7;color:#166534;padding:2px 7px;border-radius:5px;font-weight:700">READY</span>
+    </div>`).join('');
+}
+
+function renderTerminals(){
+  const el=document.getElementById('terminals'); if(!el) return;
+  el.innerHTML=DB.getTerminals().map(t=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:9px;background:${t.status==='Online'?'#f0fdf4':'#fef2f2'};border:1px solid ${t.status==='Online'?'#bbf7d0':'#fecaca'}">
+      <div style="overflow:hidden;flex:1;min-width:0">
+        <p style="font-size:12px;font-weight:600;color:#1e293b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name}</p>
+        <p style="font-size:10px;color:#64748b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.loc}</p>
+      </div>
+      <span style="background:${t.status==='Online'?'#dcfce7':'#fee2e2'};color:${t.status==='Online'?'#166534':'#991b1b'};padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;flex-shrink:0;margin-left:8px">${t.status}</span>
+    </div>`).join('');
+}
+
+function renderSessionLog(){
+  const el=document.getElementById('session-log'); if(!el) return;
+  if(!recognitionHistory.length){
+    el.innerHTML='<p style="text-align:center;padding:20px;color:#94a3b8;font-size:12px">No recognitions yet this session</p>'; return;
+  }
+  el.innerHTML=[...recognitionHistory].reverse().map(r=>{
+    const ok=r.status==='Present';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #f8fafc;animation:fade-in .3s ease">
+      <div style="width:30px;height:30px;border-radius:50%;background:${ok?'#dcfce7':'#fef3c7'};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px;color:${ok?'#166534':'#92400e'};flex-shrink:0">${r.avatar}</div>
+      <div style="flex:1;overflow:hidden">
+        <p style="font-size:12px;font-weight:600;color:#1e293b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</p>
+        <p style="font-size:10px;color:#94a3b8;margin:0">${r.time} · ${Math.round(r.conf*100)}% conf</p>
+      </div>
+      ${App.badgeHtml(r.status)}
+    </div>`;
+  }).join('');
+}
+
+// ── Camera ────────────────────────────────────────────────────────────────────
+async function loadModels(){
+  try{
     await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model');
     modelsLoaded=true;
-  } catch(e) { modelsLoaded=false; }
+  }catch(e){modelsLoaded=false;}
 }
 
-async function startCamera() {
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
-    const vid=$('cam-video'); vid.srcObject=stream;
-    await new Promise(r=>vid.addEventListener('loadedmetadata',r,{once:true})); vid.play();
-    vid.style.display='block'; $('cam-canvas').style.display='block';
-    $('cam-placeholder').style.display='none'; $('detect-pill').style.display='block';
-    $('scan-line').style.display='block';
-    $('btn-start').disabled=true; $('btn-capture').disabled=false; $('btn-stop').disabled=false;
-    $('cam-status-txt').textContent='Camera Active'; $('live-dot').style.background='#10b981';
-    const cv=$('cam-canvas');
-    const sync=()=>{cv.width=vid.videoWidth||1280;cv.height=vid.videoHeight||720;$('cam-res').textContent=`${cv.width}×${cv.height}`;};
-    sync(); vid.addEventListener('resize',sync);
-    startDetectLoop();
-  } catch(e) { App.toast('Camera error: '+e.message,'error'); }
+async function startCam(){
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
+    const vid=document.getElementById('cam-vid');
+    vid.srcObject=stream;
+    await new Promise(r=>vid.addEventListener('loadedmetadata',r,{once:true}));
+    vid.play(); vid.style.display='block';
+    document.getElementById('cam-placeholder').style.display='none';
+    document.getElementById('cam-cvs').style.display='block';
+    document.getElementById('scan-ln').style.display='block';
+    document.getElementById('detect-pill').style.display='block';
+    document.getElementById('conf-meter').style.display='block';
+    document.getElementById('btn-start').disabled=true;
+    document.getElementById('btn-rec').disabled=false;
+    document.getElementById('btn-auto-rec').disabled=false;
+    document.getElementById('btn-stop').disabled=false;
+    document.getElementById('live-dot').style.cssText='width:10px;height:10px;border-radius:50%;background:#10b981;animation:pulse-green 1.5s infinite;flex-shrink:0';
+    document.getElementById('cam-status').textContent='Camera Active — Face Recognition Ready';
+    const cv=document.getElementById('cam-cvs');
+    vid.addEventListener('loadeddata',()=>{
+      cv.width=vid.videoWidth; cv.height=vid.videoHeight;
+      const r=document.getElementById('cam-res');
+      if(r){r.textContent=`${cv.width}×${cv.height}`;r.style.display='inline';}
+    });
+    startDetect();
+  }catch(e){App.toast('Camera error: '+e.message,'error');}
 }
 
-function startDetectLoop() {
-  const vid=$('cam-video'), cv=$('cam-canvas'); if(!vid||!cv) return;
-  const ctx=cv.getContext('2d');
-  let hold=0, prog=0;
-  async function loop() {
-    if (!stream) return;
-    frameCount++; const now=Date.now();
-    if (now-lastFps>=1000) { $('cam-fps').textContent=`FPS: ${frameCount}`; frameCount=0; lastFps=now; }
+let autoRecTimer=null, isAutoRec=false;
+function toggleAutoRec(){
+  isAutoRec=!isAutoRec;
+  const btn=document.getElementById('btn-auto-rec');
+  if(isAutoRec){
+    btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px">stop_circle</span>Stop Auto';
+    btn.style.background='#fef3c7'; btn.style.color='#92400e';
+    autoRecTimer=setInterval(()=>{ if(!capturing&&faceDetected) captureAndRecognize(); },4000);
+    App.toast('Auto-recognition ON — marks attendance when face detected','info');
+  } else {
+    btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px">play_circle</span>Auto Mode';
+    btn.style.background=''; btn.style.color='';
+    clearInterval(autoRecTimer);
+  }
+}
+
+function stopCam(){
+  if(autoRecTimer){clearInterval(autoRecTimer);isAutoRec=false;}
+  if(detectLoop){cancelAnimationFrame(detectLoop);detectLoop=null;}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  faceDetected=false;
+  document.getElementById('cam-vid').style.display='none';
+  document.getElementById('cam-cvs').style.display='none';
+  document.getElementById('scan-ln').style.display='none';
+  document.getElementById('detect-pill').style.display='none';
+  document.getElementById('conf-meter').style.display='none';
+  document.getElementById('cam-placeholder').style.display='flex';
+  document.getElementById('btn-start').disabled=false;
+  document.getElementById('btn-rec').disabled=true;
+  document.getElementById('btn-auto-rec').disabled=true;
+  document.getElementById('btn-stop').disabled=true;
+  document.getElementById('live-dot').style.cssText='width:10px;height:10px;border-radius:50%;background:#94a3b8;flex-shrink:0';
+  document.getElementById('cam-status').textContent='Camera Stopped';
+}
+
+function startDetect(){
+  const vid=document.getElementById('cam-vid'), cv=document.getElementById('cam-cvs');
+  if(!vid||!cv) return;
+  const ctx=cv.getContext('2d'); let hold=0, prog=0;
+  async function loop(){
+    if(!stream) return;
+    frameCount++; const n=Date.now();
+    if(n-lastFps>=1000){const f=document.getElementById('cam-fps');if(f)f.textContent=`FPS: ${frameCount}`;frameCount=0;lastFps=n;}
     ctx.clearRect(0,0,cv.width,cv.height);
-    if (modelsLoaded&&vid.readyState>=2) {
-      try {
-        const dets=await faceapi.detectAllFaces(vid,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.45}));
-        if (dets.length>0) {
-          hold=15; prog=Math.min(100,prog+10);
-          const dt=$('detect-txt'); if(dt) dt.textContent=`${dets.length} FACE${dets.length>1?'S':''} DETECTED`;
+    if(modelsLoaded&&vid.readyState>=2){
+      try{
+        const dets=await faceapi.detectAllFaces(vid,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:.45}));
+        if(dets.length>0){
+          faceDetected=true; hold=12; prog=Math.min(100,prog+8);
+          const dt=document.getElementById('detect-txt');
+          if(dt) dt.textContent=`${dets.length} FACE${dets.length>1?'S':''} DETECTED`;
+          const dd=document.getElementById('detect-dot'); if(dd) dd.style.background='#10b981';
           const sx=cv.width/(vid.videoWidth||1), sy=cv.height/(vid.videoHeight||1);
           dets.forEach(d=>{
-            const {x,y,width:w,height:h}=d.box;
-            const bx=x*sx,by=y*sy,bw=w*sx,bh=h*sy,cs=20;
-            ctx.strokeStyle='#10b981'; ctx.lineWidth=2.5; ctx.shadowBlur=14; ctx.shadowColor='#10b981';
+            const{x,y,width:w,height:h}=d.box;
+            const bx=x*sx,by=y*sy,bw=w*sx,bh=h*sy,cs=18;
+            ctx.strokeStyle='#10b981';ctx.lineWidth=2.5;ctx.shadowBlur=16;ctx.shadowColor='#10b981';
             ctx.beginPath();
             [[bx,by,cs,0,0,cs],[bx+bw,by,-cs,0,0,cs],[bx,by+bh,cs,0,0,-cs],[bx+bw,by+bh,-cs,0,0,-cs]]
-              .forEach(([ox,oy,d1,d2,d3,d4])=>{ctx.moveTo(ox+d1,oy+d2);ctx.lineTo(ox,oy);ctx.lineTo(ox+d3,oy+d4)});
+              .forEach(([ox,oy,a,b,c,d2])=>{ctx.moveTo(ox+a,oy+b);ctx.lineTo(ox,oy);ctx.lineTo(ox+c,oy+d2)});
             ctx.stroke(); ctx.shadowBlur=0;
-            ctx.fillStyle='rgba(16,185,129,.15)'; ctx.fillRect(bx,by,bw,bh);
+            ctx.fillStyle='rgba(16,185,129,.08)'; ctx.fillRect(bx,by,bw,bh);
             ctx.fillStyle='#10b981'; ctx.font='bold 11px Inter';
-            ctx.fillText(`${Math.round(d.score*100)}% FACE`,bx+5,by-6);
+            ctx.fillText(`FACE ${Math.round(d.score*100)}%`,bx+4,by>14?by-5:by+14);
           });
-        } else if(hold>0){hold--;}
-        else { const dt=$('detect-txt'); if(dt) dt.textContent='SCANNING'; prog=Math.max(0,prog-8); }
-      } catch(e){}
-    } else { prog=60+Math.sin(Date.now()/500)*20; }
+        } else if(hold>0){hold--;faceDetected=false;}
+        else{faceDetected=false;prog=Math.max(0,prog-6);
+          const dt=document.getElementById('detect-txt');if(dt) dt.textContent='SCANNING';
+          const dd=document.getElementById('detect-dot');if(dd) dd.style.background='#f59e0b';
+        }
+      }catch(e){}
+    } else { prog=Math.min(100,prog+2); }
+    const cb=document.getElementById('conf-bar'),cv2=document.getElementById('conf-val');
+    if(cb){cb.style.width=prog+'%';cb.style.background=prog>70?'#10b981':prog>40?'#f59e0b':'#ef4444';}
+    if(cv2) cv2.textContent=prog+'%';
     detectLoop=requestAnimationFrame(loop);
   }
   loop();
 }
 
-async function captureAndRecognize() {
-  if (capturing||!stream) return; capturing=true;
-  $('btn-capture').textContent='Recognizing…'; $('btn-capture').disabled=true;
-  const fl=$('capture-flash'); fl.style.opacity='.85'; setTimeout(()=>fl.style.opacity='0',120);
+async function captureAndRecognize(){
+  if(capturing||!stream) return;
+  const enrolled=Object.keys(DB.getAllFaceData()).length;
+  if(!enrolled){
+    App.modal('No Students Enrolled','<div style="text-align:center;padding:10px"><span class="material-symbols-outlined" style="font-size:48px;color:#f59e0b">warning</span><p style="color:#374151;margin:12px 0">No students have face data enrolled yet.<br>Enroll students first to use face recognition.</p><a href="enroll.html" class="btn btn-primary" style="display:inline-flex">Go to Enrollment</a></div>');
+    return;
+  }
+  capturing=true;
+  const btn=document.getElementById('btn-rec');
+  if(btn){btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px;animation:rotate-ring 1s linear infinite">autorenew</span>Recognizing…';btn.disabled=true;}
 
-  await new Promise(r=>setTimeout(r,400));
+  const fl=document.getElementById('cap-flash');
+  if(fl){fl.style.opacity='.85';setTimeout(()=>fl.style.opacity='0',120);}
 
-  const result = DB.recognize(deptF);
-  if (!result) { App.toast('No enrolled students in '+(deptF||'any dept'),'warning'); capturing=false; $('btn-capture').innerHTML='<span class="material-symbols-outlined" style="font-size:16px">face_unlock</span>Recognize & Mark'; $('btn-capture').disabled=false; return; }
+  // Show scanning state
+  document.getElementById('result-panel').innerHTML=`
+    <div style="padding:20px 0;text-align:center">
+      <div style="width:64px;height:64px;border-radius:50%;background:#f0f9ff;border:3px solid #93c5fd;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;animation:rotate-ring 1.5s linear infinite">
+        <span class="material-symbols-outlined" style="font-size:28px;color:#3b82f6">face_unlock</span>
+      </div>
+      <p style="font-size:14px;font-weight:700;color:#3b82f6;margin:0">Matching face…</p>
+      <p style="font-size:12px;color:#94a3b8;margin:4px 0 0">Comparing against ${enrolled} enrolled students</p>
+    </div>`;
 
-  // Show result
-  const { student:s, conf, status } = result;
-  const isLate = status==='Late';
-  const rc = document.getElementById('result-card');
-  rc.innerHTML = `
-    <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:white;margin:0 auto 12px">${s.avatar}</div>
-    <h3 style="font-size:15px;font-weight:800;color:#0f172a;margin:0">${s.name}</h3>
-    <p style="font-size:12px;color:#64748b;margin:3px 0 6px">${s.stuId} · ${s.dept}</p>
-    <div style="margin-bottom:10px">${App.badgeHtml(status)}</div>
-    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap">
-      <span style="font-size:11px;background:#f1f5f9;padding:4px 10px;border-radius:8px;color:#374151">Conf: ${Math.round(conf*100)}%</span>
-      <span style="font-size:11px;background:#f1f5f9;padding:4px 10px;border-radius:8px;color:#374151">${new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</span>
-    </div>
-    <div style="width:100%;height:6px;background:#f1f5f9;border-radius:99px;overflow:hidden">
-      <div style="height:100%;background:${isLate?'#f59e0b':'#10b981'};border-radius:99px;width:${Math.round(conf*100)}%;transition:width .8s ease"></div>
-    </div>
-    <p style="font-size:12px;font-weight:700;color:${isLate?'#92400e':'#166534'};margin-top:8px">✅ Attendance Recorded</p>`;
+  await new Promise(r=>setTimeout(r,900));
 
-  App.toast(`${s.name} — ${status}`, isLate?'warning':'success');
-  loadFeed();
+  const result=DB.recognize(deptFilter||undefined);
+  if(result){
+    showResult(result);
+    recognitionHistory.push({
+      name:result.student.name, avatar:result.student.avatar,
+      status:result.status, conf:result.conf,
+      time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})
+    });
+    renderSessionLog();
+  } else {
+    document.getElementById('result-panel').innerHTML=`
+      <div style="padding:20px;text-align:center">
+        <span class="material-symbols-outlined" style="font-size:40px;color:#f59e0b">person_off</span>
+        <p style="font-size:13px;font-weight:700;color:#92400e;margin:10px 0 4px">No Match Found</p>
+        <p style="font-size:12px;color:#94a3b8;margin:0">No enrolled student recognized</p>
+      </div>`;
+    App.toast('No enrolled student recognized','warning');
+  }
 
   capturing=false;
-  $('btn-capture').innerHTML='<span class="material-symbols-outlined" style="font-size:16px">face_unlock</span>Recognize & Mark';
-  $('btn-capture').disabled=false;
+  if(btn){btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px">face_unlock</span>Recognize & Mark';btn.disabled=false;}
 }
 
-function stopCamera() {
-  if (detectLoop) cancelAnimationFrame(detectLoop);
-  if (stream) { stream.getTracks().forEach(t=>t.stop()); stream=null; }
-  ['cam-video','cam-canvas','detect-pill','scan-line'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
-  $('cam-placeholder').style.display='flex';
-  $('btn-start').disabled=false; $('btn-capture').disabled=true; $('btn-stop').disabled=true;
-  $('cam-status-txt').textContent='Camera Stopped'; $('live-dot').style.background='#94a3b8';
-}
-
-function loadTerminals() {
-  const el=$('terminal-list'); if(!el) return;
-  const terms=DB.getTerminals();
-  el.innerHTML=terms.map(t=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:${t.status==='Online'?'#f0fdf4':'#fef2f2'};border-radius:10px;border:1px solid ${t.status==='Online'?'#bbf7d0':'#fecaca'}">
-    <div style="overflow:hidden"><p style="font-size:12px;font-weight:600;color:#1e293b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name}</p><p style="font-size:10px;color:#64748b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.loc}</p></div>
-    ${App.badgeHtml(t.status)}
-  </div>`).join('');
-}
-
-function loadFeed() {
-  const el=$('live-feed'); if(!el) return;
-  const {rows}=DB.getAttendance({limit:8});
-  el.innerHTML=rows.map(r=>{
-    const ok=r.status==='Present';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;background:#f8fafc;border:1px solid #f1f5f9">
-      <div style="width:28px;height:28px;border-radius:50%;background:${ok?'#dcfce7':'#fef3c7'};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:${ok?'#166534':'#92400e'};flex-shrink:0">${r.avatar||'??'}</div>
-      <div style="flex:1;min-width:0"><p style="font-size:12px;font-weight:600;color:#1e293b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.stuName}</p></div>
-      <div style="text-align:right;flex-shrink:0">${App.badgeHtml(r.status)}<p style="font-size:10px;color:#94a3b8;margin:2px 0 0">${App.formatTime(r.checkIn)}</p></div>
+function showResult(r){
+  const s=r.student, late=r.status==='Late', pct=Math.round(r.conf*100);
+  const rp=document.getElementById('result-panel');
+  rp.innerHTML=`
+    <div class="result-card" style="padding:20px">
+      <!-- Student info -->
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+        <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,${late?'#f59e0b,#ef4444':'#3b82f6,#6d28d9'});display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:white;flex-shrink:0;${!late?'animation:pulse-green 2s infinite':''}">${s.avatar}</div>
+        <div style="flex:1;overflow:hidden;text-align:left">
+          <h4 style="font-size:15px;font-weight:800;color:#0f172a;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</h4>
+          <p style="font-size:12px;color:#64748b;margin:2px 0">${s.stuId} · ${s.dept}</p>
+          <div style="display:flex;gap:6px;margin-top:4px">${App.badgeHtml(r.status)}${r.hasFaceData?'<span class="badge badge-green">Face Matched</span>':'<span class="badge badge-amber">ID Match</span>'}</div>
+        </div>
+      </div>
+      <!-- Confidence -->
+      <div style="background:${late?'#fffbeb':'#f0fdf4'};border:1px solid ${late?'#fde68a':'#bbf7d0'};border-radius:12px;padding:12px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:11px;font-weight:700;color:#64748b">Recognition Confidence</span>
+          <span style="font-size:14px;font-weight:800;color:${pct>=90?'#166534':pct>=80?'#92400e':'#991b1b'}">${pct}%</span>
+        </div>
+        <div style="height:8px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden">
+          <div style="height:100%;background:${pct>=90?'#10b981':pct>=80?'#f59e0b':'#ef4444'};border-radius:99px;width:${pct}%;transition:width 1s ease"></div>
+        </div>
+      </div>
+      <!-- Status -->
+      <div style="text-align:center;padding:10px 0">
+        <p style="font-size:22px;margin:0">${late?'⚠️':'✅'}</p>
+        <p style="font-size:14px;font-weight:800;color:${late?'#92400e':'#166534'};margin:6px 0 2px">${late?'Late Arrival':'Present'}</p>
+        <p style="font-size:11px;color:#94a3b8;margin:0">Attendance recorded at ${new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</p>
+      </div>
     </div>`;
-  }).join('');
+  App.toast(`${s.name} — ${r.status} (${pct}%)`, late?'warning':'success');
 }
 
-document.addEventListener('keydown',e=>{ if(e.code==='Space'&&stream&&!capturing){e.preventDefault();captureAndRecognize();} });
+// ── Init ──────────────────────────────────────────────────────────────────────
+const deptFilter = deptF;
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&stream&&!capturing&&!e.target.matches('input,textarea')){e.preventDefault();captureAndRecognize();}
+});
 render();
 </script>
 </body>

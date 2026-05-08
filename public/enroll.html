@@ -1,359 +1,503 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta name="page-title" content="Face Enrollment"/>
-<meta name="page-sub" content="Capture & register student face data"/>
-<title>Face Enrollment — Attendance System</title>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="Face Enrollment"/><meta name="page-sub" content="Register student face data for recognition"/>
+<title>Face Enrollment</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
-<script src="db.js"></script>
-<script src="layout.js"></script>
+<script src="db.js"></script><script src="layout.js"></script>
+<style>
+  *{font-family:'Inter',sans-serif;box-sizing:border-box}
+  .face-slot{aspect-ratio:1;border-radius:12px;border:2px dashed #e2e8f0;background:#f8fafc;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:all .3s;cursor:pointer}
+  .face-slot.captured{border:2px solid #10b981;background:#f0fdf4}
+  .face-slot.active{border:2px solid #3b82f6;animation:pulse-border 1.5s infinite}
+  @keyframes pulse-border{0%,100%{border-color:#3b82f6}50%{border-color:#93c5fd}}
+  .step-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;transition:all .3s}
+  .step-line{flex:1;height:2px;background:#e2e8f0;transition:background .3s}
+  .step-line.done{background:#10b981}
+  .stu-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;transition:background .15s}
+  .stu-item:hover{background:#f0f9ff}
+  .stu-item.selected{background:#eff6ff;border-left:3px solid #3b82f6}
+  .cam-overlay{position:absolute;inset:0;pointer-events:none}
+  @keyframes scan-line{0%{top:10%}100%{top:90%}}
+  @keyframes breathe{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.03);opacity:1}}
+</style>
 </head>
 <body>
 <script>
-const user = App.init(['admin','hod','faculty']);
-const deptF = user?.role==='admin' ? null : user?.dept;
+const user  = App.init(['admin','hod','faculty']);
+const deptF = user?.role==='admin'?null:user?.dept;
+const isAdmin = user?.role==='admin';
 
-// Check if pre-selected student from URL
-const params = new URLSearchParams(location.search);
-const preselId = params.get('id');
+let stream=null, detectLoop=null, modelsLoaded=false;
+let selectedStu=null, samples=[], currentStep=1;
+const MAX=5;
+const ANGLES=['Front','Left Tilt','Right Tilt','Look Up','Look Down'];
 
-let stream = null, modelsLoaded = false, capturedSamples = [], selectedStudentId = null;
-const MAX_SAMPLES = 5;
+// Pre-load from URL param
+const urlParams = new URLSearchParams(location.search);
+const preId = urlParams.get('id');
 
-function render() {
-  document.getElementById('page-content').innerHTML = `
-  <div style="max-width:1100px">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start" class="enroll-grid">
+function render(){
+  document.getElementById('page-content').innerHTML=`
+  <div style="max-width:1200px">
 
-      <!-- Left: Camera panel -->
-      <div>
-        <div class="card" style="overflow:hidden">
-          <div style="padding:18px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px">
-            <div style="width:36px;height:36px;border-radius:10px;background:#dbeafe;display:flex;align-items:center;justify-content:center">
-              <span class="material-symbols-outlined" style="color:#3b82f6;font-size:20px">videocam</span>
+    <!-- Step indicator -->
+    <div style="display:flex;align-items:center;gap:0;margin-bottom:28px;padding:20px 24px;background:white;border-radius:16px;border:1px solid #f1f5f9">
+      ${['Select Student','Capture Samples','Enroll & Verify'].map((s,i)=>{
+        const done=currentStep>i+1, active=currentStep===i+1;
+        return `
+          <div style="display:flex;align-items:center;gap:10px;${i<2?'flex:1':''}">
+            <div class="step-dot" style="background:${done?'#10b981':active?'#3b82f6':'#f1f5f9'};color:${done||active?'white':'#94a3b8'}">
+              ${done?'<span class="material-symbols-outlined" style="font-size:16px">check</span>':i+1}
             </div>
             <div>
-              <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">Face Camera</h3>
-              <p style="font-size:11px;color:#94a3b8;margin:0">Capture multiple angles</p>
+              <p style="font-size:12px;font-weight:700;color:${active?'#0f172a':'#94a3b8'};margin:0">${s}</p>
+              <p style="font-size:10px;color:#94a3b8;margin:0">${['Choose student','Live camera','Save data'][i]}</p>
             </div>
-            <div id="cam-status" style="margin-left:auto;display:flex;align-items:center;gap:6px">
-              <span id="status-dot" style="width:8px;height:8px;border-radius:50%;background:#94a3b8"></span>
-              <span id="status-txt" style="font-size:11px;color:#94a3b8;font-weight:600">OFFLINE</span>
+            ${i<2?`<div class="step-line ${done?'done':''}" style="margin-left:10px"></div>`:''}
+          </div>`;
+      }).join('')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start" class="enroll-grid">
+
+      <!-- LEFT: Student selector + info -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- Search -->
+        <div class="card" style="overflow:hidden">
+          <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9;background:#f8fafc">
+            <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 10px">Select Student</h3>
+            <div style="position:relative">
+              <span class="material-symbols-outlined" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:17px">search</span>
+              <input id="stu-search" type="text" placeholder="Search name or ID…" oninput="renderList()"
+                style="width:100%;padding:8px 8px 8px 34px;background:white;border:1.5px solid #e2e8f0;border-radius:9px;font-size:12px"/>
             </div>
           </div>
+          <div id="stu-list" style="max-height:320px;overflow-y:auto"></div>
+        </div>
 
-          <!-- Camera view -->
-          <div style="position:relative;background:#0f172a;aspect-ratio:4/3;overflow:hidden">
+        <!-- Selected student card -->
+        ${selectedStu ? `
+        <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #93c5fd;border-radius:16px;padding:16px">
+          <p style="font-size:10px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px">Selected Student</p>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#6d28d9);display:flex;align-items:center;justify-content:center;font-weight:800;color:white;font-size:17px;flex-shrink:0">${selectedStu.avatar}</div>
+            <div style="flex:1;overflow:hidden">
+              <h4 style="font-size:14px;font-weight:700;color:#0f172a;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${selectedStu.name}</h4>
+              <p style="font-size:11px;color:#3b82f6;margin:2px 0;font-weight:600">${selectedStu.stuId}</p>
+              <p style="font-size:11px;color:#64748b;margin:0">${selectedStu.dept}</p>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+            <div style="background:white;border-radius:10px;padding:8px;text-align:center">
+              <p style="font-size:16px;font-weight:800;color:#0f172a;margin:0">${DB.getAttendance({stuRef:selectedStu.id,limit:999}).total}</p>
+              <p style="font-size:10px;color:#64748b;margin:0">Attendance</p>
+            </div>
+            <div style="background:white;border-radius:10px;padding:8px;text-align:center">
+              ${DB.hasFaceData(selectedStu.id)
+                ?`<p style="font-size:11px;font-weight:700;color:#10b981;margin:0">✅ Enrolled</p><p style="font-size:10px;color:#64748b;margin:2px 0 0">Face data exists</p>`
+                :`<p style="font-size:11px;font-weight:700;color:#f59e0b;margin:0">⏳ Pending</p><p style="font-size:10px;color:#64748b;margin:2px 0 0">No face data</p>`}
+            </div>
+          </div>
+          ${DB.hasFaceData(selectedStu.id)?`
+          <button onclick="reEnroll()" style="width:100%;margin-top:10px;padding:8px;background:#fee2e2;color:#ef4444;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">
+            🔄 Re-enroll (overwrite existing)
+          </button>`:''}
+        </div>` : `
+        <div style="background:#f8fafc;border:1.5px dashed #e2e8f0;border-radius:16px;padding:24px;text-align:center">
+          <span class="material-symbols-outlined" style="font-size:36px;color:#cbd5e1">person_search</span>
+          <p style="font-size:12px;color:#94a3b8;margin:8px 0 0">Select a student to begin enrollment</p>
+        </div>`}
+
+        <!-- Tips -->
+        <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:14px;padding:14px">
+          <p style="font-size:12px;font-weight:700;color:#92400e;margin:0 0 8px;display:flex;align-items:center;gap:5px">
+            <span class="material-symbols-outlined" style="font-size:16px">lightbulb</span>Tips for best accuracy
+          </p>
+          <ol style="padding-left:14px;margin:0;font-size:11px;color:#78350f;line-height:1.9">
+            <li>Good lighting — face the light source</li>
+            <li>Remove glasses if possible</li>
+            <li>Each capture = different angle</li>
+            <li>Keep neutral expression</li>
+            <li>Minimum ${MAX} samples required</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- RIGHT: Camera + capture grid -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- Camera panel -->
+        <div class="card" style="overflow:hidden">
+          <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px">
+            <div style="width:8px;height:8px;border-radius:50%;background:${stream?'#10b981':'#94a3b8'};${stream?'animation:pulse-border 1s infinite':''}" id="cam-dot"></div>
+            <span style="font-size:13px;font-weight:700;color:#0f172a" id="cam-label">Camera</span>
+            <span id="cam-meta" style="font-size:11px;color:#94a3b8;margin-left:auto;font-family:monospace"></span>
+          </div>
+
+          <!-- Video area -->
+          <div style="position:relative;background:#0f172a;aspect-ratio:16/9;overflow:hidden">
             <!-- Placeholder -->
-            <div id="cam-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
-              <div style="width:80px;height:80px;border-radius:50%;border:3px dashed #334155;display:flex;align-items:center;justify-content:center">
-                <span class="material-symbols-outlined" style="font-size:36px;color:#475569">face_unlock</span>
+            <div id="cam-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+              <div style="width:90px;height:90px;border-radius:50%;border:3px dashed #334155;display:flex;align-items:center;justify-content:center;animation:breathe 2.5s ease-in-out infinite">
+                <span class="material-symbols-outlined" style="font-size:44px;color:#475569">face_unlock</span>
               </div>
-              <p style="font-size:12px;color:#475569;margin:0">Camera not started</p>
-              <button onclick="startCamera()" class="btn btn-primary" style="font-size:12px;padding:8px 16px">
-                <span class="material-symbols-outlined" style="font-size:16px">videocam</span>Start Camera
-              </button>
+              <p style="color:#64748b;font-size:13px;margin:0">Click Start Camera to begin</p>
             </div>
-            <video id="cam-video" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;display:none;transform:scaleX(-1)"></video>
-            <canvas id="cam-canvas" style="position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);pointer-events:none;display:none"></canvas>
+            <video id="cam-vid" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;display:none;transform:scaleX(-1)"></video>
+            <canvas id="cam-cvs" style="position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);display:none;pointer-events:none"></canvas>
 
-            <!-- Face guide overlay -->
-            <div id="face-guide" style="position:absolute;inset:0;display:none;pointer-events:none">
-              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:45%;aspect-ratio:3/4">
-                <div style="width:100%;height:100%;border:2px dashed rgba(59,130,246,.6);border-radius:50%;"></div>
-                <p id="guide-text" style="position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);font-size:11px;color:#93c5fd;white-space:nowrap;font-weight:600">POSITION FACE IN OVAL</p>
-              </div>
+            <!-- Oval guide -->
+            <div id="face-oval" style="position:absolute;inset:0;display:none;pointer-events:none">
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:38%;aspect-ratio:3/4;border:2.5px dashed rgba(59,130,246,.7);border-radius:50%"></div>
+              <p id="guide-txt" style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:12px;color:#93c5fd;font-weight:700;white-space:nowrap;background:rgba(0,0,0,.5);padding:4px 12px;border-radius:20px">POSITION FACE</p>
             </div>
 
-            <!-- Capture flash -->
-            <div id="cap-flash" style="position:absolute;inset:0;background:white;opacity:0;pointer-events:none;transition:opacity .1s"></div>
+            <!-- Angle indicator -->
+            <div id="angle-badge" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);backdrop-filter:blur(4px);border-radius:20px;padding:5px 14px">
+              <span id="angle-txt" style="color:white;font-size:11px;font-weight:700">FRONT VIEW</span>
+            </div>
 
             <!-- Sample counter -->
-            <div id="sample-counter" style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.7);border-radius:8px;padding:6px 12px;display:none">
-              <span id="counter-text" style="color:white;font-size:12px;font-weight:700">0 / ${MAX_SAMPLES}</span>
+            <div style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.7);border-radius:8px;padding:5px 12px" id="sample-ctr" style="display:none">
+              <span id="sample-ctr-txt" style="color:white;font-size:12px;font-weight:700">0/${MAX}</span>
             </div>
+
+            <!-- Flash -->
+            <div id="flash" style="position:absolute;inset:0;background:white;opacity:0;pointer-events:none;transition:opacity .08s"></div>
+
+            <!-- Scanning line -->
+            <div id="scan-ln" style="display:none;position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#3b82f6,transparent);animation:scan-line 2.5s linear infinite"></div>
           </div>
 
           <!-- Controls -->
-          <div style="padding:14px 16px;display:flex;gap:8px;flex-wrap:wrap">
-            <button id="btn-start" onclick="startCamera()" class="btn btn-primary" style="flex:1;justify-content:center;font-size:12px">
+          <div style="padding:12px 14px;display:flex;gap:8px;background:#fafbff;flex-wrap:wrap">
+            <button id="btn-start" onclick="startCam()" class="btn btn-primary" style="font-size:12px">
               <span class="material-symbols-outlined" style="font-size:16px">videocam</span>Start
             </button>
-            <button id="btn-capture" onclick="captureFrame()" class="btn btn-secondary" style="flex:1;justify-content:center;font-size:12px" disabled>
-              <span class="material-symbols-outlined" style="font-size:16px">camera</span>Capture
+            <button id="btn-cap" onclick="captureFrame()" disabled class="btn" style="background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:12px">
+              <span class="material-symbols-outlined" style="font-size:16px">camera</span>Capture (Space)
             </button>
-            <button id="btn-stop" onclick="stopCamera()" class="btn btn-secondary" style="flex:1;justify-content:center;font-size:12px" disabled>
+            <button id="btn-auto" onclick="toggleAuto()" disabled class="btn btn-secondary" style="font-size:12px">
+              <span class="material-symbols-outlined" style="font-size:16px">play_circle</span>Auto-Capture
+            </button>
+            <button id="btn-stop" onclick="stopCam()" disabled class="btn btn-secondary" style="font-size:12px">
               <span class="material-symbols-outlined" style="font-size:16px">videocam_off</span>Stop
             </button>
           </div>
         </div>
 
-        <!-- Captured samples -->
-        <div class="card" style="margin-top:16px;padding:16px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0">Captured Samples</h3>
-            <span id="samples-count" style="font-size:11px;color:#94a3b8">0 / ${MAX_SAMPLES}</span>
+        <!-- Sample grid -->
+        <div class="card" style="padding:18px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div>
+              <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0">Captured Samples</h3>
+              <p style="font-size:11px;color:#94a3b8;margin:2px 0 0">Need ${MAX} angles for accurate recognition</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:80px;height:6px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+                <div id="prog-bar" style="height:100%;background:#10b981;border-radius:99px;width:0%;transition:width .4s ease"></div>
+              </div>
+              <span id="prog-txt" style="font-size:12px;font-weight:700;color:#374151">0/${MAX}</span>
+            </div>
           </div>
-          <div id="samples-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
-            ${Array(MAX_SAMPLES).fill(0).map((_,i)=>`<div id="sample-slot-${i}" style="aspect-ratio:1;border-radius:10px;border:2px dashed #e2e8f0;background:#f8fafc;display:flex;align-items:center;justify-content:center">
-              <span class="material-symbols-outlined" style="font-size:20px;color:#cbd5e1">add_photo_alternate</span>
+
+          <!-- 5 sample slots with angle labels -->
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">
+            ${ANGLES.map((angle,i)=>`
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div class="face-slot" id="slot-${i}" onclick="deleteSlot(${i})" title="${samples[i]?'Click to remove':'Waiting for capture'}">
+                <span class="material-symbols-outlined" style="font-size:22px;color:#cbd5e1" id="slot-ico-${i}">add_a_photo</span>
+              </div>
+              <p style="font-size:9px;text-align:center;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.03em">${angle}</p>
             </div>`).join('')}
           </div>
-          <div style="display:flex;gap:8px;margin-top:12px">
+
+          <div style="display:flex;gap:10px">
             <button onclick="clearSamples()" class="btn btn-secondary" style="font-size:12px">
-              <span class="material-symbols-outlined" style="font-size:15px">clear_all</span>Clear
+              <span class="material-symbols-outlined" style="font-size:15px">clear_all</span>Clear All
             </button>
-            <button onclick="enrollFace()" id="btn-enroll" class="btn btn-primary" style="flex:1;justify-content:center;font-size:12px" disabled>
-              <span class="material-symbols-outlined" style="font-size:16px">how_to_reg</span>Enroll Face Data
+            <button onclick="submitEnroll()" id="btn-enroll" disabled class="btn btn-primary" style="flex:1;justify-content:center;font-size:13px;padding:10px">
+              <span class="material-symbols-outlined" style="font-size:18px">how_to_reg</span>Enroll Face Data for Recognition
             </button>
           </div>
         </div>
-      </div>
 
-      <!-- Right: Student selector + enrolled list -->
-      <div>
-        <!-- Student selector -->
-        <div class="card" style="padding:20px;margin-bottom:16px">
-          <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0 0 14px">Select Student to Enroll</h3>
-          <div style="position:relative;margin-bottom:12px">
-            <span class="material-symbols-outlined" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:18px">search</span>
-            <input id="stu-search" type="text" placeholder="Search by name or ID…" oninput="renderStudentList()"
-              style="padding-left:38px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding-top:9px;padding-bottom:9px;font-size:13px;color:#1e293b;width:100%"/>
+        <!-- Enrolled students list (admin only) -->
+        ${isAdmin?`
+        <div class="card" style="overflow:hidden">
+          <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
+            <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0">
+              <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;color:#10b981">face_retouching_natural</span>
+              Enrolled Students (${Object.keys(DB.getAllFaceData()).length})
+            </h3>
+            <a href="recognition.html" class="btn btn-primary" style="font-size:11px;padding:6px 12px">
+              <span class="material-symbols-outlined" style="font-size:14px">face_unlock</span>Start Recognition
+            </a>
           </div>
-          <div id="stu-list" style="max-height:300px;overflow-y:auto;border:1.5px solid #f1f5f9;border-radius:12px"></div>
-        </div>
-
-        <!-- Selected student card -->
-        <div id="selected-card" style="display:none" class="card" style="padding:20px;margin-bottom:16px;border:2px solid #bfdbfe;background:#f0f9ff">
-        </div>
-
-        <!-- Instructions -->
-        <div class="card" style="padding:20px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe)">
-          <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 10px;display:flex;align-items:center;gap:6px">
-            <span class="material-symbols-outlined" style="color:#3b82f6;font-size:18px">info</span>
-            Enrollment Instructions
-          </h3>
-          <ol style="padding-left:16px;margin:0;font-size:12px;color:#374151;line-height:1.8">
-            <li>Select a student from the list</li>
-            <li>Start the camera</li>
-            <li>Ask student to look at camera</li>
-            <li>Capture <strong>${MAX_SAMPLES} samples</strong> at different angles</li>
-            <li>Click <strong>Enroll Face Data</strong></li>
-            <li>Status updates to <strong>Enrolled ✅</strong></li>
-          </ol>
-          <div style="margin-top:12px;padding:10px;background:rgba(59,130,246,.1);border-radius:8px;border-left:3px solid #3b82f6">
-            <p style="font-size:11px;color:#1e40af;margin:0;font-weight:500">💡 Tip: Capture front, left tilt, right tilt, up, and down for best recognition accuracy.</p>
-          </div>
-        </div>
+          <div id="enrolled-list" style="max-height:220px;overflow-y:auto"></div>
+        </div>`:''}
       </div>
     </div>
   </div>
-  <style>
-    @media(max-width:768px){.enroll-grid{grid-template-columns:1fr!important}}
-  </style>`;
+  <style>@media(max-width:900px){.enroll-grid{grid-template-columns:1fr!important}}</style>`;
 
-  renderStudentList();
+  renderList();
+  renderSlots();
+  if(isAdmin) renderEnrolledList();
   loadModels();
-  if (preselId) selectStudent(preselId);
+  if(preId) { const s=DB.getStudent(preId); if(s) selectStu(s); }
 }
 
-function renderStudentList() {
-  const q   = document.getElementById('stu-search')?.value||'';
-  const opts = deptF ? {dept:deptF} : {};
-  if (q) opts.search = q;
-  const { rows } = DB.getStudents({...opts, limit:30});
-  const el = document.getElementById('stu-list');
-  if (!el) return;
-  el.innerHTML = rows.map(s => `
-    <div onclick="selectStudent('${s.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background .15s;${selectedStudentId===s.id?'background:#eff6ff;':''}"
-      onmouseover="if('${s.id}'!=='${selectedStudentId}')this.style.background='#f8fafc'" onmouseout="if('${s.id}'!=='${selectedStudentId}')this.style.background='white'">
-      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:11px;flex-shrink:0">${s.avatar}</div>
+// ── Student list ──────────────────────────────────────────────────────────────
+function renderList(){
+  const q=document.getElementById('stu-search')?.value||'';
+  const opts=deptF?{dept:deptF}:{};
+  if(q) opts.search=q;
+  const {rows}=DB.getStudents({...opts,limit:40});
+  const el=document.getElementById('stu-list'); if(!el) return;
+  el.innerHTML=rows.map(s=>`
+    <div class="stu-item ${selectedStu?.id===s.id?'selected':''}" onclick="selectStu(${JSON.stringify(s).replace(/"/g,'&quot;')})">
+      <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#6d28d9);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:11px;flex-shrink:0">${s.avatar}</div>
       <div style="flex:1;overflow:hidden">
-        <p style="font-size:13px;font-weight:600;color:#1e293b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</p>
-        <p style="font-size:11px;color:#94a3b8;margin:0">${s.stuId} · ${s.dept.split(' ')[0]}</p>
+        <p style="font-size:12px;font-weight:600;color:#1e293b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</p>
+        <p style="font-size:10px;color:#94a3b8;margin:0">${s.stuId}</p>
       </div>
-      ${App.badgeHtml(s.bio||'Pending')}
-      ${selectedStudentId===s.id?'<span class="material-symbols-outlined" style="color:#3b82f6;font-size:18px">check_circle</span>':''}
-    </div>`).join('') || '<p style="text-align:center;padding:20px;font-size:13px;color:#94a3b8">No students found</p>';
+      <span style="width:8px;height:8px;border-radius:50%;background:${DB.hasFaceData(s.id)?'#10b981':'#e2e8f0'};flex-shrink:0" title="${DB.hasFaceData(s.id)?'Face enrolled':'Not enrolled'}"></span>
+    </div>`).join('') || '<p style="text-align:center;padding:20px;color:#94a3b8;font-size:12px">No students found</p>';
 }
 
-function selectStudent(id) {
-  selectedStudentId = id;
-  const students = DB.getStudents({}).rows;
-  const s = students.find(x=>x.id===id);
-  if (!s) return;
-  renderStudentList();
-  const card = document.getElementById('selected-card');
-  card.style.display = 'block';
-  card.style.cssText += ';padding:16px 18px;margin-bottom:16px;border:2px solid #bfdbfe;background:#f0f9ff;border-radius:16px';
-  card.innerHTML = `
-    <p style="font-size:11px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.04em;margin:0 0 10px">Selected Student</p>
-    <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:16px">${s.avatar}</div>
-      <div>
-        <h4 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">${s.name}</h4>
-        <p style="font-size:12px;color:#64748b;margin:2px 0 0">${s.stuId} · ${s.dept}</p>
+function selectStu(s){
+  selectedStu = typeof s==='string' ? JSON.parse(s) : s;
+  samples=[]; render();
+}
+
+function reEnroll(){
+  App.modal('Re-enroll Student',`<p style="color:#374151;font-size:14px">This will delete existing face data for <strong>${selectedStu.name}</strong> and start fresh. Continue?</p>`,()=>{
+    DB.deleteFaceData(selectedStu.id);
+    samples=[];
+    App.toast('Previous face data cleared. Ready to re-enroll.','info');
+    render();
+  });
+}
+
+// ── Enrolled list ─────────────────────────────────────────────────────────────
+function renderEnrolledList(){
+  const el=document.getElementById('enrolled-list'); if(!el) return;
+  const fd=DB.getAllFaceData();
+  const enrolled=DB.getStudents({bio:'Enrolled'}).rows.filter(s=>fd[s.id]);
+  if(!enrolled.length){el.innerHTML='<p style="text-align:center;padding:20px;color:#94a3b8;font-size:12px">No students enrolled yet</p>';return;}
+  el.innerHTML=enrolled.map(s=>{
+    const data=fd[s.id];
+    const ago=timeAgo(data.enrolledAt);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f8fafc">
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:10px;flex-shrink:0">${s.avatar}</div>
+      <div style="flex:1;overflow:hidden">
+        <p style="font-size:12px;font-weight:600;color:#1e293b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</p>
+        <p style="font-size:10px;color:#94a3b8;margin:0">${s.stuId} · ${data.count} samples · ${ago}</p>
       </div>
-      ${App.badgeHtml(s.bio||'Pending')}
+      <button onclick="event.stopPropagation();removeEnroll('${s.id}','${s.name}')" style="padding:4px 8px;border:none;background:#fee2e2;color:#ef4444;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600">Remove</button>
     </div>`;
+  }).join('');
 }
 
-async function loadModels() {
-  try {
+function removeEnroll(id,name){
+  App.modal('Remove Face Data',`<p style="color:#374151;font-size:14px">Remove face enrollment for <strong>${name}</strong>? They won't be recognized by camera.</p>`,()=>{
+    DB.deleteFaceData(id); App.toast(`${name} face data removed`,'info'); renderEnrolledList(); renderList();
+  });
+}
+
+function timeAgo(d){ const s=(Date.now()-new Date(d).getTime())/1000; if(s<60)return'just now'; if(s<3600)return Math.floor(s/60)+'m ago'; if(s<86400)return Math.floor(s/3600)+'h ago'; return Math.floor(s/86400)+'d ago'; }
+
+// ── Slots ─────────────────────────────────────────────────────────────────────
+function renderSlots(){
+  samples.forEach((src,i)=>{
+    const slot=document.getElementById(`slot-${i}`); if(!slot) return;
+    slot.className='face-slot captured';
+    slot.innerHTML=`<img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"/>`;
+  });
+  for(let i=samples.length;i<MAX;i++){
+    const slot=document.getElementById(`slot-${i}`); if(!slot) return;
+    slot.className=`face-slot${i===samples.length?' active':''}`;
+    slot.innerHTML=`<span class="material-symbols-outlined" style="font-size:20px;color:#cbd5e1" id="slot-ico-${i}">add_a_photo</span>`;
+  }
+  const pct=Math.round(samples.length/MAX*100);
+  const pb=document.getElementById('prog-bar'); if(pb) pb.style.width=pct+'%';
+  const pt=document.getElementById('prog-txt'); if(pt) pt.textContent=`${samples.length}/${MAX}`;
+  const ct=document.getElementById('sample-ctr-txt'); if(ct) ct.textContent=`${samples.length}/${MAX}`;
+  const be=document.getElementById('btn-enroll');
+  if(be) be.disabled = samples.length<MAX || !selectedStu;
+  // Angle badge
+  const ab=document.getElementById('angle-badge'), at=document.getElementById('angle-txt');
+  if(ab&&at&&stream){ab.style.display='block';at.textContent=ANGLES[Math.min(samples.length,MAX-1)]+' VIEW';}
+}
+
+function deleteSlot(i){
+  if(i<samples.length){ samples.splice(i,1); renderSlots(); App.toast(`Sample ${i+1} removed`,'info'); }}
+
+function clearSamples(){ samples=[]; renderSlots(); App.toast('Samples cleared','info'); }
+
+// ── Camera ────────────────────────────────────────────────────────────────────
+async function loadModels(){
+  try{
     await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model');
-    modelsLoaded = true;
-  } catch(e) { modelsLoaded = false; }
+    modelsLoaded=true; console.log('✅ face-api loaded');
+  }catch(e){ modelsLoaded=false; }
 }
 
-async function startCamera() {
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
-    const vid = document.getElementById('cam-video');
-    vid.srcObject = stream; vid.style.display='block';
-    document.getElementById('cam-placeholder').style.display = 'none';
-    document.getElementById('cam-canvas').style.display = 'block';
-    document.getElementById('face-guide').style.display = 'block';
-    document.getElementById('sample-counter').style.display = 'block';
-    document.getElementById('btn-capture').disabled = false;
-    document.getElementById('btn-stop').disabled = false;
-    document.getElementById('btn-start').disabled = true;
-    setStatus('online','ACTIVE');
+async function startCam(){
+  if(!selectedStu){App.toast('Select a student first!','warning');return;}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
+    const vid=document.getElementById('cam-vid');
+    vid.srcObject=stream;
+    await new Promise(r=>vid.addEventListener('loadedmetadata',r,{once:true}));
+    vid.play(); vid.style.display='block';
+    document.getElementById('cam-placeholder').style.display='none';
+    document.getElementById('cam-cvs').style.display='block';
+    document.getElementById('face-oval').style.display='block';
+    document.getElementById('sample-ctr').style.display='block';
+    document.getElementById('scan-ln').style.display='block';
+    document.getElementById('btn-start').disabled=true;
+    document.getElementById('btn-cap').disabled=false;
+    document.getElementById('btn-auto').disabled=false;
+    document.getElementById('btn-stop').disabled=false;
+    document.getElementById('cam-dot').style.background='#10b981';
+    document.getElementById('cam-label').textContent='Camera Active — '+selectedStu.name;
+    const cv=document.getElementById('cam-cvs');
+    vid.addEventListener('loadeddata',()=>{cv.width=vid.videoWidth;cv.height=vid.videoHeight;document.getElementById('cam-meta').textContent=`${cv.width}×${cv.height}`;});
+    renderSlots();
     startDetect();
-  } catch(e) {
-    App.toast('Camera error: ' + e.message, 'error');
+  }catch(e){App.toast('Camera error: '+e.message,'error');}
+}
+
+let autoTimer=null, isAuto=false;
+function toggleAuto(){
+  isAuto=!isAuto;
+  const btn=document.getElementById('btn-auto');
+  if(isAuto){
+    btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px">stop_circle</span>Stop Auto';
+    btn.style.background='#fef3c7'; btn.style.color='#92400e';
+    autoTimer=setInterval(()=>{if(samples.length<MAX)captureFrame();else{toggleAuto();}},2200);
+    App.toast('Auto-capture started — capturing every 2.2 seconds','info');
+  } else {
+    btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px">play_circle</span>Auto-Capture';
+    btn.style.background=''; btn.style.color='';
+    clearInterval(autoTimer);
   }
 }
 
-let detectLoop = null;
-function startDetect() {
-  const vid = document.getElementById('cam-video');
-  const cvs = document.getElementById('cam-canvas');
-  if (!vid||!cvs) return;
-  cvs.width = vid.videoWidth||640; cvs.height = vid.videoHeight||480;
-  const ctx = cvs.getContext('2d');
-  async function loop() {
-    if (!stream) return;
-    ctx.clearRect(0,0,cvs.width,cvs.height);
-    if (modelsLoaded && vid.readyState>=2) {
-      try {
-        const dets = await faceapi.detectAllFaces(vid, new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5}));
-        const gt = document.getElementById('guide-text');
-        if (dets.length) {
-          gt.textContent = capturedSamples.length>=MAX_SAMPLES ? '✅ SAMPLES COMPLETE' : `FACE DETECTED — Press CAPTURE (${capturedSamples.length}/${MAX_SAMPLES})`;
-          gt.style.color = '#86efac';
-          const sx = cvs.width/(vid.videoWidth||1), sy = cvs.height/(vid.videoHeight||1);
+async function captureFrame(){
+  if(!stream||!selectedStu) return;
+  if(samples.length>=MAX){App.toast('All samples captured! Click Enroll.','info');return;}
+  const vid=document.getElementById('cam-vid');
+  const snap=document.createElement('canvas');
+  snap.width=vid.videoWidth||640; snap.height=vid.videoHeight||480;
+  snap.getContext('2d').drawImage(vid,0,0);
+  const url=snap.toDataURL('image/jpeg',0.75);
+  samples.push(url);
+  // Flash
+  const fl=document.getElementById('flash'); fl.style.opacity='.9'; setTimeout(()=>fl.style.opacity='0',100);
+  renderSlots();
+  if(samples.length>=MAX){
+    App.toast(`All ${MAX} samples captured! Click "Enroll Face Data"`, 'success');
+    if(isAuto) toggleAuto();
+  }
+}
+
+function stopCam(){
+  if(autoTimer){clearInterval(autoTimer);isAuto=false;}
+  if(detectLoop){cancelAnimationFrame(detectLoop);detectLoop=null;}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  const vid=document.getElementById('cam-vid');
+  if(vid){vid.style.display='none';}
+  document.getElementById('cam-cvs').style.display='none';
+  document.getElementById('face-oval').style.display='none';
+  document.getElementById('scan-ln').style.display='none';
+  document.getElementById('sample-ctr').style.display='none';
+  document.getElementById('angle-badge').style.display='none';
+  document.getElementById('cam-placeholder').style.display='flex';
+  document.getElementById('btn-start').disabled=false;
+  document.getElementById('btn-cap').disabled=true;
+  document.getElementById('btn-auto').disabled=true;
+  document.getElementById('btn-stop').disabled=true;
+  document.getElementById('cam-dot').style.background='#94a3b8';
+  document.getElementById('cam-label').textContent='Camera';
+  document.getElementById('cam-meta').textContent='';
+}
+
+function startDetect(){
+  const vid=document.getElementById('cam-vid'), cv=document.getElementById('cam-cvs');
+  if(!vid||!cv) return;
+  const ctx=cv.getContext('2d'); let hold=0;
+  async function loop(){
+    if(!stream) return;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    if(modelsLoaded&&vid.readyState>=2){
+      try{
+        const dets=await faceapi.detectAllFaces(vid,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:.45}));
+        const gt=document.getElementById('guide-txt');
+        if(dets.length>0){
+          hold=10;
+          if(gt){ gt.textContent=samples.length>=MAX?'✅ ALL SAMPLES DONE':`FACE DETECTED — ${ANGLES[Math.min(samples.length,MAX-1)].toUpperCase()} (${samples.length}/${MAX})`; gt.style.color='#86efac'; }
+          const sx=cv.width/(vid.videoWidth||1), sy=cv.height/(vid.videoHeight||1);
           dets.forEach(d=>{
-            const {x,y,width:w,height:h} = d.box;
-            ctx.strokeStyle='#10b981'; ctx.lineWidth=2.5;
-            ctx.shadowBlur=12; ctx.shadowColor='#10b981';
-            const cs=18, bx=x*sx, by=y*sy, bw=w*sx, bh=h*sy;
+            const {x,y,width:w,height:h}=d.box;
+            const bx=x*sx,by=y*sy,bw=w*sx,bh=h*sy,cs=18;
+            ctx.strokeStyle='#10b981';ctx.lineWidth=2.5;ctx.shadowBlur=14;ctx.shadowColor='#10b981';
             ctx.beginPath();
             [[bx,by,cs,0,0,cs],[bx+bw,by,-cs,0,0,cs],[bx,by+bh,cs,0,0,-cs],[bx+bw,by+bh,-cs,0,0,-cs]]
-              .forEach(([ox,oy,dx1,dy1,dx2,dy2])=>{ctx.moveTo(ox+dx1,oy+dy1);ctx.lineTo(ox,oy);ctx.lineTo(ox+dx2,oy+dy2)});
+              .forEach(([ox,oy,d1,d2,d3,d4])=>{ctx.moveTo(ox+d1,oy+d2);ctx.lineTo(ox,oy);ctx.lineTo(ox+d3,oy+d4)});
             ctx.stroke(); ctx.shadowBlur=0;
+            ctx.fillStyle='rgba(16,185,129,.1)'; ctx.fillRect(bx,by,bw,bh);
           });
-        } else {
-          gt.textContent = 'POSITION FACE IN OVAL';
-          gt.style.color = '#93c5fd';
-        }
-      } catch(e){}
+        } else if(hold>0){hold--;}
+        else if(gt){gt.textContent='POSITION FACE IN OVAL';gt.style.color='#93c5fd';}
+      }catch(e){}
     }
-    detectLoop = requestAnimationFrame(loop);
+    detectLoop=requestAnimationFrame(loop);
   }
   loop();
 }
 
-function captureFrame() {
-  if (!stream) return;
-  if (!selectedStudentId) { App.toast('Select a student first!', 'warning'); return; }
-  if (capturedSamples.length >= MAX_SAMPLES) { App.toast('Maximum samples reached', 'info'); return; }
-  const vid = document.getElementById('cam-video');
-  const snap = document.createElement('canvas');
-  snap.width = vid.videoWidth||640; snap.height = vid.videoHeight||480;
-  snap.getContext('2d').drawImage(vid,0,0);
-  const dataUrl = snap.toDataURL('image/jpeg',0.7);
-  capturedSamples.push(dataUrl);
-
-  // Flash
-  const fl = document.getElementById('cap-flash');
-  fl.style.opacity='0.8'; setTimeout(()=>fl.style.opacity='0',100);
-
-  // Update slot
-  const slot = document.getElementById(`sample-slot-${capturedSamples.length-1}`);
-  if (slot) {
-    slot.style.border='2px solid #10b981';
-    slot.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px"/>`;
-  }
-  document.getElementById('samples-count').textContent = `${capturedSamples.length} / ${MAX_SAMPLES}`;
-  document.getElementById('counter-text').textContent  = `${capturedSamples.length} / ${MAX_SAMPLES}`;
-
-  if (capturedSamples.length >= MAX_SAMPLES) {
-    document.getElementById('btn-enroll').disabled = false;
-    App.toast(`${MAX_SAMPLES} samples captured! Click Enroll Face Data.`, 'success');
-  }
+// ── Enroll ────────────────────────────────────────────────────────────────────
+function submitEnroll(){
+  if(!selectedStu){App.toast('No student selected','warning');return;}
+  if(samples.length<MAX){App.toast(`Need ${MAX} samples (have ${samples.length})`,'warning');return;}
+  App.modal('Confirm Enrollment',`
+    <div style="text-align:center;padding:10px 0">
+      <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#6d28d9);display:flex;align-items:center;justify-content:center;font-weight:800;color:white;font-size:20px;margin:0 auto 12px">${selectedStu.avatar}</div>
+      <h4 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">${selectedStu.name}</h4>
+      <p style="font-size:12px;color:#64748b;margin:4px 0 12px">${selectedStu.stuId} · ${selectedStu.dept}</p>
+      <div style="background:#f0fdf4;border-radius:12px;padding:12px;margin-bottom:4px">
+        <p style="font-size:13px;font-weight:700;color:#166534;margin:0">✅ ${MAX} face samples ready</p>
+        <p style="font-size:11px;color:#64748b;margin:4px 0 0">This student will be recognized by the attendance camera</p>
+      </div>
+    </div>`,
+    ()=>{
+      DB.saveFaceData(selectedStu.id, samples);
+      App.toast(`${selectedStu.name} enrolled successfully! Status → Enrolled ✅`,'success');
+      samples=[];
+      stopCam();
+      currentStep=3;
+      render();
+      // Auto-reset step after 3s
+      setTimeout(()=>{currentStep=1;render();},3000);
+    }
+  );
 }
 
-function clearSamples() {
-  capturedSamples = [];
-  document.getElementById('btn-enroll').disabled = true;
-  document.getElementById('samples-count').textContent = `0 / ${MAX_SAMPLES}`;
-  document.getElementById('counter-text').textContent  = `0 / ${MAX_SAMPLES}`;
-  for (let i=0;i<MAX_SAMPLES;i++) {
-    const slot = document.getElementById(`sample-slot-${i}`);
-    if (slot) { slot.style.border='2px dashed #e2e8f0'; slot.innerHTML=`<span class="material-symbols-outlined" style="font-size:20px;color:#cbd5e1">add_photo_alternate</span>`; }
-  }
-}
-
-function stopCamera() {
-  if (detectLoop) cancelAnimationFrame(detectLoop);
-  if (stream) { stream.getTracks().forEach(t=>t.stop()); stream=null; }
-  document.getElementById('cam-video').style.display='none';
-  document.getElementById('cam-canvas').style.display='none';
-  document.getElementById('face-guide').style.display='none';
-  document.getElementById('sample-counter').style.display='none';
-  document.getElementById('cam-placeholder').style.display='flex';
-  document.getElementById('btn-start').disabled=false;
-  document.getElementById('btn-capture').disabled=true;
-  document.getElementById('btn-stop').disabled=true;
-  setStatus('offline','OFFLINE');
-}
-
-function enrollFace() {
-  if (!selectedStudentId) { App.toast('Select a student!','warning'); return; }
-  if (capturedSamples.length<MAX_SAMPLES) { App.toast(`Need ${MAX_SAMPLES} samples`,'warning'); return; }
-  // Save face data in localStorage (in real system, would send to ML backend)
-  const faceData = { studentId:selectedStudentId, samples:capturedSamples, enrolledAt:new Date().toISOString(), sampleCount:capturedSamples.length };
-  const allFace = JSON.parse(localStorage.getItem('fas_face_data')||'{}');
-  allFace[selectedStudentId] = faceData;
-  localStorage.setItem('fas_face_data', JSON.stringify(allFace));
-  // Update student bio status
-  DB.updateStudent(selectedStudentId, {bio:'Enrolled'});
-  App.toast('Face enrolled successfully! Status → Enrolled ✅', 'success');
-  clearSamples();
-  stopCamera();
-  renderStudentList();
-  const card = document.getElementById('selected-card');
-  if (card) { const badge = card.querySelector('.badge'); if(badge){badge.className='badge badge-green';badge.textContent='Enrolled';} }
-}
-
-function setStatus(state, txt) {
-  const dot = document.getElementById('status-dot');
-  const t   = document.getElementById('status-txt');
-  if (dot) dot.style.background = state==='online'?'#10b981':'#94a3b8';
-  if (t)   t.style.color = state==='online'?'#10b981':'#94a3b8';
-  if (dot&&state==='online') dot.style.animation='pulse 1.5s infinite';
-  if (t)   t.textContent = txt;
-}
+// Keyboard shortcut
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&stream&&!e.target.matches('input,textarea')){e.preventDefault();captureFrame();}
+});
 
 render();
 </script>
-<style>
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-</style>
 </body>
 </html>
