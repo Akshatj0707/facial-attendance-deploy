@@ -1,3 +1,4 @@
+// Requires api.js to be loaded first
 const App = {
   ROLE_CONFIG: {
     admin:   { label:'Administrator',  color:'#3b82f6', icon:'admin_panel_settings' },
@@ -8,6 +9,7 @@ const App = {
   NAV: {
     admin: [
       { href:'dashboard.html',  icon:'dashboard',              label:'Dashboard' },
+      { href:'verify.html',     icon:'how_to_reg',             label:'Verify Students' },
       { href:'students.html',   icon:'group',                  label:'Students' },
       { href:'enroll.html',     icon:'face_retouching_natural',label:'Face Enroll' },
       { href:'recognition.html',icon:'face_unlock',            label:'Recognition' },
@@ -20,6 +22,7 @@ const App = {
     ],
     hod: [
       { href:'dashboard.html',  icon:'dashboard',              label:'Dashboard' },
+      { href:'verify.html',     icon:'how_to_reg',             label:'Verify Students' },
       { href:'students.html',   icon:'group',                  label:'My Students' },
       { href:'enroll.html',     icon:'face_retouching_natural',label:'Face Enroll' },
       { href:'recognition.html',icon:'face_unlock',            label:'Recognition' },
@@ -46,8 +49,8 @@ const App = {
   },
 
   init(roles=[]) {
-    const sess = DB.getSession();
-    if (!sess) { window.location.href='login.html'; return null; }
+    const sess = Api.getUser();
+    if (!sess || !Api.getToken()) { window.location.href='login.html'; return null; }
     if (roles.length && !roles.includes(sess.role)) {
       window.location.href = sess.role==='student'?'student.html':'dashboard.html';
       return null;

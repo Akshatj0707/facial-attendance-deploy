@@ -1,5 +1,5 @@
 node_modules/
-.env
-*.db
-data.json
+backend/.env
+backend/node_modules/
 .DS_Store
+*.log
