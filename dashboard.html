@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="Dashboard"/>
+<meta name="page-sub" content="Overview & live analytics"/>
+<title>Dashboard — Attendance System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="db.js"></script>
+<script src="api.js"></script>
+<script src="layout.js"></script>
+</head>
+<body>
+<script>
+const user = App.init(['admin','hod','faculty']);
+const rc   = App.ROLE_CONFIG[user?.role] || App.ROLE_CONFIG.admin;
+const deptF= user?.role==='admin' ? null : user?.dept;
+
+function render() {
+  const stats = DB.getStats(deptF);
+  const pct   = stats.total ? Math.round(stats.present/stats.total*100) : 0;
+
+  document.getElementById('page-content').innerHTML = `
+  <div style="max-width:1400px">
+
+    <!-- Welcome banner -->
+    <div style="background:linear-gradient(135deg,${rc.color} 0%,${rc.color}cc 100%);border-radius:20px;padding:24px 28px;color:white;margin-bottom:24px;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-20px;top:-20px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.08)"></div>
+      <div style="position:absolute;right:60px;bottom:-40px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
+      <p style="font-size:13px;opacity:.8;margin-bottom:4px">Good ${getGreeting()}, ${user.name.split(' ')[0]} 👋</p>
+      <h2 style="font-size:22px;font-weight:800;margin:0">${rc.label} Portal</h2>
+      ${deptF?`<p style="font-size:12px;opacity:.7;margin-top:4px">${deptF}</p>`:'<p style="font-size:12px;opacity:.7;margin-top:4px">All Departments</p>'}
+      <div style="display:flex;gap:16px;margin-top:16px;flex-wrap:wrap">
+        <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 18px">
+          <p style="font-size:22px;font-weight:800;margin:0">${stats.total}</p>
+          <p style="font-size:11px;opacity:.8;margin:0">Total Students</p>
+        </div>
+        <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 18px">
+          <p style="font-size:22px;font-weight:800;margin:0">${stats.present}</p>
+          <p style="font-size:11px;opacity:.8;margin:0">Present Today</p>
+        </div>
+        <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 18px">
+          <p style="font-size:22px;font-weight:800;margin:0">${pct}%</p>
+          <p style="font-size:11px;opacity:.8;margin:0">Attendance Rate</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+      ${kpiCard('Total Students', stats.total, 'group', '#3b82f6', `+${Math.floor(Math.random()*5)+2} this month`)}
+      ${kpiCard('Present Today', stats.present, 'check_circle', '#10b981', `${pct}% of enrolled`)}
+      ${kpiCard('Late Arrivals', stats.late, 'schedule', '#f59e0b', 'Today')}
+      ${kpiCard('Absent Today', stats.total-stats.present-stats.late, 'cancel', '#ef4444', 'Need follow-up')}
+      ${user.role==='admin' ? kpiCard('Active Terminals', stats.terminals, 'sensors', '#8b5cf6', '1 offline') : ''}
+      ${user.role==='admin' ? kpiCard('Enrolled (Bio)', DB.getStudents({bio:'Enrolled'}).total, 'face_retouching_natural', '#06b6d4', 'Face data ready') : ''}
+    </div>
+
+    <!-- Charts row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px" class="charts-grid">
+
+      <!-- Hourly trend -->
+      <div class="card" style="padding:20px">
+        <div style="display:flex;align-items:center;justify-content:between;margin-bottom:16px">
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">Today's Check-in Trend</h3>
+            <p style="font-size:12px;color:#94a3b8;margin:2px 0 0">Hourly distribution</p>
+          </div>
+        </div>
+        <div id="trend-chart" style="height:140px"></div>
+      </div>
+
+      <!-- Dept breakdown -->
+      <div class="card" style="padding:20px">
+        <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0 0 4px">Department Overview</h3>
+        <p style="font-size:12px;color:#94a3b8;margin:0 0 14px">Attendance rate by department</p>
+        <div style="space-y:8px">
+          ${stats.depts.slice(0,5).map(d => {
+            const r = d.total ? Math.round(d.present/d.total*100) : 0;
+            const c = r>=85?'#10b981':r>=70?'#f59e0b':'#ef4444';
+            return `<div style="margin-bottom:10px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                <span style="font-size:12px;font-weight:600;color:#374151">${d.dept.replace(' Engineering','').replace('Computer ','CS')}</span>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:11px;color:#64748b">${d.present}/${d.total}</span>
+                  <span style="font-size:12px;font-weight:700;color:${c}">${r}%</span>
+                </div>
+              </div>
+              <div style="height:6px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+                <div style="height:100%;background:${c};border-radius:99px;width:${r}%;transition:width 1s ease"></div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom row: Recent logs + Quick actions -->
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px" class="bottom-grid">
+
+      <!-- Recent logs -->
+      <div class="card" style="overflow:hidden">
+        <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:between">
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">Recent Check-ins</h3>
+            <p style="font-size:12px;color:#94a3b8;margin:2px 0 0">Live activity feed</p>
+          </div>
+          <a href="attendance.html" style="font-size:12px;color:#3b82f6;font-weight:600;text-decoration:none;margin-left:auto">View all →</a>
+        </div>
+        <div style="max-height:320px;overflow-y:auto">
+          ${stats.recentLogs.slice(0,8).map(log => {
+            const ok = log.status==='Present';
+            return `<div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #f8fafc;transition:background .15s" onmouseover="this.style.background='#fafbff'" onmouseout="this.style.background='white'">
+              <div style="width:38px;height:38px;border-radius:50%;background:${ok?'#dcfce7':'#fef3c7'};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:${ok?'#166534':'#92400e'};flex-shrink:0">${log.avatar||'??'}</div>
+              <div style="flex:1;min-width:0">
+                <p style="font-size:13px;font-weight:600;color:#1e293b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${log.stuName||'—'}</p>
+                <p style="font-size:11px;color:#94a3b8;margin:2px 0 0">${log.terminal||'Terminal'} · ${log.course||'—'}</p>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div>${App.badgeHtml(log.status)}</div>
+                <p style="font-size:11px;color:#94a3b8;margin:3px 0 0">${App.formatTime(log.checkIn)}</p>
+              </div>
+            </div>`;
+          }).join('') || '<p style="text-align:center;padding:32px;color:#94a3b8;font-size:13px">No check-ins today yet</p>'}
+        </div>
+      </div>
+
+      <!-- Quick actions + attendance donut -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <!-- Donut -->
+        <div class="card" style="padding:20px;text-align:center">
+          <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 12px">Today's Rate</h3>
+          ${App.donut(pct, rc.color, 100)}
+          <p style="font-size:12px;color:#64748b;margin:8px 0 0">${stats.present} present of ${stats.total}</p>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="card" style="padding:20px">
+          <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 12px">Quick Actions</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${quickAction('face_unlock','Start Recognition','recognition.html',rc.color)}
+            ${quickAction('group','View Students','students.html','#64748b')}
+            ${quickAction('bar_chart','View Reports','reports.html','#64748b')}
+            ${user.role!=='faculty'?quickAction('face_retouching_natural','Enroll Face','enroll.html','#64748b'):''}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @media(max-width:768px){
+      .charts-grid{grid-template-columns:1fr!important}
+      .bottom-grid{grid-template-columns:1fr!important}
+    }
+  </style>`;
+
+  // Draw chart after DOM ready
+  if (stats.hourlyTrend.length) App.barChart('trend-chart', stats.hourlyTrend, rc.color);
+  else document.getElementById('trend-chart').innerHTML = '<p style="text-align:center;color:#94a3b8;font-size:12px;padding-top:50px">No check-ins today yet</p>';
+}
+
+function kpiCard(label, value, icon, color, sub) {
+  return `<div class="stat-card">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between">
+      <div>
+        <p style="font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px">${label}</p>
+        <p style="font-size:28px;font-weight:800;color:#0f172a;margin:0;line-height:1">${value}</p>
+        <p style="font-size:11px;color:#94a3b8;margin:6px 0 0">${sub}</p>
+      </div>
+      <div style="width:44px;height:44px;border-radius:12px;background:${color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <span class="material-symbols-outlined" style="color:${color};font-size:22px">${icon}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function quickAction(icon, label, href, color) {
+  return `<a href="${href}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#f8fafc;text-decoration:none;transition:all .2s;border:1.5px solid #f1f5f9"
+    onmouseover="this.style.background='#eff6ff';this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc';this.style.borderColor='#f1f5f9'">
+    <span class="material-symbols-outlined" style="color:${color};font-size:20px">${icon}</span>
+    <span style="font-size:13px;font-weight:600;color:#374151">${label}</span>
+    <span class="material-symbols-outlined" style="margin-left:auto;color:#cbd5e1;font-size:16px">chevron_right</span>
+  </a>`;
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  return h<12?'morning':h<17?'afternoon':'evening';
+}
+
+render();
+setInterval(render, 30000);
+</script>
+<script>
+const user = App.init(['admin','hod','faculty']);
+const rc   = App.ROLE_CONFIG[user?.role] || App.ROLE_CONFIG.admin;
+const deptF = user?.role==='admin' ? null : user?.dept;
+
+async function render() {
+  const json = await Api.getStats();
+  if (!json?.success) return;
+  const data = json.data;
+  const pct = data.totalStudents ? Math.round(data.presentToday/data.totalStudents*100) : 0;
+
+  document.getElementById('page-content').innerHTML = `
+  <div style="max-width:1400px">
+    <!-- Welcome banner -->
+    <div style="background:linear-gradient(135deg,${rc.color} 0%,${rc.color}cc 100%);border-radius:20px;padding:22px 28px;color:white;margin-bottom:20px;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-20px;top:-20px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.08)"></div>
+      <p style="font-size:13px;opacity:.8;margin:0 0 4px">Good ${getGreeting()}, ${user.name.split(' ')[0]} 👋</p>
+      <h2 style="font-size:22px;font-weight:800;margin:0 0 4px">${rc.label} Dashboard</h2>
+      ${user.department?`<p style="font-size:12px;opacity:.7;margin:0">${user.department}</p>`:'<p style="font-size:12px;opacity:.7;margin:0">All Departments</p>'}
+      <div style="display:flex;gap:14px;margin-top:16px;flex-wrap:wrap">
+        ${[['totalStudents','Students'],['presentToday','Present Today'],[pct+'%','Attendance Rate'],['faceEnrolled','Face Enrolled']].map(([val,label])=>`
+        <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 18px">
+          <p style="font-size:22px;font-weight:800;margin:0">${typeof val==='string'&&val.includes('%')?val:data[val]??val}</p>
+          <p style="font-size:11px;opacity:.8;margin:0">${label}</p>
+        </div>`).join('')}
+        ${data.pendingVerification>0?`
+        <a href="verify.html" style="background:rgba(245,158,11,.25);border:1px solid rgba(245,158,11,.5);border-radius:12px;padding:10px 18px;text-decoration:none;display:flex;align-items:center;gap:8px">
+          <span class="material-symbols-outlined" style="color:#fcd34d;font-size:20px">pending_actions</span>
+          <div><p style="font-size:18px;font-weight:800;margin:0;color:white">${data.pendingVerification}</p><p style="font-size:11px;color:#fcd34d;margin:0">Pending Verification</p></div>
+        </a>`:''}
+      </div>
+    </div>
+
+    <!-- KPI grid -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">
+      ${kpi('Total Students',data.totalStudents,'group','#3b82f6')}
+      ${kpi('Present Today',data.presentToday,'check_circle','#10b981')}
+      ${kpi('Late Today',data.lateToday,'schedule','#f59e0b')}
+      ${kpi('Face Enrolled',data.faceEnrolled,'face_retouching_natural','#8b5cf6')}
+    </div>
+
+    <!-- Charts -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px" class="charts-grid">
+      <div class="card" style="padding:20px">
+        <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 4px">Today's Check-in Trend</h3>
+        <p style="font-size:11px;color:#94a3b8;margin:0 0 14px">Hourly distribution</p>
+        <div id="trend-chart" style="height:130px"></div>
+      </div>
+      <div class="card" style="padding:20px">
+        <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 4px">Department Overview</h3>
+        <p style="font-size:11px;color:#94a3b8;margin:0 0 14px">Attendance by department</p>
+        ${data.departments.map(d=>{
+          const rate=d.total?Math.round(d.present/d.total*100):0;
+          const c=rate>=85?'#10b981':rate>=70?'#f59e0b':'#ef4444';
+          return `<div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:12px;font-weight:600;color:#374151">${d.department.split(' ')[0]}</span>
+              <span style="font-size:12px;font-weight:700;color:${c}">${rate}%</span>
+            </div>
+            <div style="height:6px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+              <div style="height:100%;background:${c};border-radius:99px;width:${rate}%;transition:width 1s"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- Bottom row -->
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px" class="bottom-grid">
+      <div class="card" style="overflow:hidden">
+        <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+          <h3 style="font-size:13px;font-weight:700;color:#0f172a;margin:0">Recent Check-ins</h3>
+          <a href="attendance.html" style="font-size:12px;color:#3b82f6;font-weight:600;text-decoration:none">View all →</a>
+        </div>
+        <div style="max-height:300px;overflow-y:auto">
+          ${data.recentLogs.slice(0,8).map(log=>{
+            const s=log.student||{}; const ok=log.status==='Present';
+            return `<div style="display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid #f8fafc;transition:background .15s" onmouseover="this.style.background='#fafbff'" onmouseout="this.style.background='white'">
+              <div style="width:36px;height:36px;border-radius:50%;background:${ok?'#dcfce7':'#fef3c7'};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:${ok?'#166534':'#92400e'};flex-shrink:0">${s.avatar||'??'}</div>
+              <div style="flex:1;min-width:0">
+                <p style="font-size:13px;font-weight:600;color:#1e293b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name||'—'}</p>
+                <p style="font-size:11px;color:#94a3b8;margin:0">${s.studentId||''} · ${s.course||'—'}</p>
+              </div>
+              <div style="text-align:right">${App.badgeHtml(log.status)}<p style="font-size:10px;color:#94a3b8;margin:3px 0 0">${App.formatTime(log.checkIn)}</p></div>
+            </div>`;
+          }).join('') || '<p style="text-align:center;padding:30px;color:#94a3b8;font-size:12px">No check-ins today</p>'}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card" style="padding:20px;text-align:center">
+          <h3 style="font-size:12px;font-weight:700;color:#64748b;margin:0 0 10px">Today's Rate</h3>
+          ${App.donut(pct, rc.color, 100)}
+          <p style="font-size:11px;color:#64748b;margin:6px 0 0">${data.presentToday} of ${data.totalStudents}</p>
+        </div>
+        <div class="card" style="padding:16px">
+          <h3 style="font-size:12px;font-weight:700;color:#64748b;margin:0 0 10px">Quick Actions</h3>
+          ${[['face_unlock','Recognition','recognition.html',rc.color],
+             ['face_retouching_natural','Enroll Face','enroll.html','#64748b'],
+             ['how_to_reg','Verify Students','verify.html','#f59e0b'],
+             ['bar_chart','Reports','reports.html','#64748b']].map(([ic,lb,hr,col])=>`
+          <a href="${hr}" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:#f8fafc;text-decoration:none;margin-bottom:7px;border:1.5px solid #f1f5f9;transition:all .2s" onmouseover="this.style.background='#eff6ff';this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc';this.style.borderColor='#f1f5f9'">
+            <span class="material-symbols-outlined" style="color:${col};font-size:18px">${ic}</span>
+            <span style="font-size:12px;font-weight:600;color:#374151">${lb}</span>
+            <span class="material-symbols-outlined" style="margin-left:auto;color:#cbd5e1;font-size:15px">chevron_right</span>
+          </a>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+  <style>@media(max-width:768px){.charts-grid,.bottom-grid{grid-template-columns:1fr!important}}</style>`;
+
+  if (data.hourlyTrend?.length) App.barChart('trend-chart', data.hourlyTrend, rc.color);
+  else { const el=document.getElementById('trend-chart'); if(el) el.innerHTML='<p style="text-align:center;color:#94a3b8;font-size:12px;padding-top:40px">No check-ins today</p>'; }
+}
+
+function kpi(label,val,icon,color){
+  return `<div class="stat-card"><div style="display:flex;align-items:flex-start;justify-content:space-between">
+    <div><p style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px">${label}</p>
+    <p style="font-size:28px;font-weight:800;color:#0f172a;margin:0">${val}</p></div>
+    <div style="width:42px;height:42px;border-radius:12px;background:${color}18;display:flex;align-items:center;justify-content:center">
+      <span class="material-symbols-outlined" style="color:${color};font-size:22px">${icon}</span>
+    </div>
+  </div></div>`;
+}
+
+function getGreeting(){const h=new Date().getHours();return h<12?'morning':h<17?'afternoon':'evening';}
+
+render();
+setInterval(render, 30000);
+</script>
+</body></html>

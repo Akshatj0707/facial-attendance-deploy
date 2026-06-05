@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta http-equiv="refresh" content="0;url=login.html"/>
+<title>College Attendance System</title>
+<script src="db.js"></script>
+<script>
+  const s = typeof DB !== 'undefined' && DB.getSession ? DB.getSession() : null;
+  if (s) window.location.href = s.role === 'student' ? 'student.html' : 'dashboard.html';
+  else   window.location.href = 'login.html';
+</script>
+</head>
+<body style="font-family:Inter,sans-serif;background:#0f172a;color:white;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+  <p style="color:#475569;font-size:14px">Redirecting…</p>
+</body>
+</html>

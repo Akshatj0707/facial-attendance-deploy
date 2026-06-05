@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="Attendance Log"/><meta name="page-sub" content="Filter, view & manage attendance records"/>
+<title>Attendance — Attendance System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="db.js"></script><script src="api.js"></script>
+<script src="layout.js"></script>
+</head>
+<body>
+<script>
+const user  = App.init(['admin','hod','faculty']);
+const deptF = user?.role==='admin' ? null : user?.dept;
+const canDel= user?.role==='admin' || user?.role==='hod';
+let f = { search:'', dept:'all', status:'all', date: new Date().toISOString().split('T')[0] };
+
+function render() {
+  document.getElementById('page-content').innerHTML = `
+  <div style="max-width:1400px">
+    <!-- Filters -->
+    <div class="card" style="padding:16px 20px;margin-bottom:20px">
+      <div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:10px;align-items:center;flex-wrap:wrap" class="filter-grid">
+        <div style="position:relative">
+          <span class="material-symbols-outlined" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:18px">search</span>
+          <input type="text" id="att-search" placeholder="Search student…" value="${f.search}" oninput="f.search=this.value;renderRows()"
+            style="padding-left:36px;width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding-top:9px;padding-bottom:9px;font-size:13px;color:#1e293b"/>
+        </div>
+        <input type="date" id="att-date" value="${f.date}" onchange="f.date=this.value;renderRows()"
+          style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:13px"/>
+        ${!deptF?`<select id="att-dept" onchange="f.dept=this.value;renderRows()" style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:13px">
+          <option value="all">All Depts</option>
+          <option>Computer Science</option><option>Electrical Engineering</option>
+          <option>Mechanical Engineering</option><option>Civil Engineering</option>
+        </select>`:''}
+        <select id="att-status" onchange="f.status=this.value;renderRows()" style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:13px">
+          <option value="all">All Status</option>
+          <option value="Present">Present</option>
+          <option value="Late">Late</option>
+          <option value="Absent">Absent</option>
+        </select>
+        <button onclick="exportCSV()" class="btn btn-secondary" style="font-size:12px;white-space:nowrap">
+          <span class="material-symbols-outlined" style="font-size:16px">download</span>Export CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px" id="summary-row"></div>
+
+    <!-- Table -->
+    <div class="card" style="overflow:hidden">
+      <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
+        <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">Attendance Records</h3>
+        <span id="row-count" style="font-size:12px;color:#94a3b8"></span>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>Student</th><th>Date</th><th>Check-in</th><th>Department</th>
+            <th>Course</th><th>Terminal</th><th>Status</th><th>Confidence</th>
+            ${canDel?'<th></th>':''}
+          </tr></thead>
+          <tbody id="att-tbody"><tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Manual add (admin/hod/faculty) -->
+    ${user.role!=='student'?`<div style="margin-top:16px;display:flex;justify-content:flex-end">
+      <button onclick="openManualModal()" class="btn btn-primary">
+        <span class="material-symbols-outlined" style="font-size:16px">add_circle</span>Mark Attendance Manually
+      </button>
+    </div>`:''}
+  </div>
+  <style>
+    @media(max-width:700px){.filter-grid{grid-template-columns:1fr!important}}
+  </style>`;
+  renderRows();
+}
+
+function renderRows() {
+  const q = {
+    search: f.search||undefined, date: f.date||undefined, status: f.status!=='all'?f.status:undefined,
+    limit: 100
+  };
+  if (deptF) q.dept = deptF; else if (f.dept!=='all') q.dept = f.dept;
+  const { rows, total } = DB.getAttendance(q);
+  const tbody = document.getElementById('att-tbody');
+  const countEl= document.getElementById('row-count');
+  if (countEl) countEl.textContent = `${total} records`;
+
+  // Summary
+  const sumEl = document.getElementById('summary-row');
+  if (sumEl) {
+    const present = rows.filter(r=>r.status==='Present').length;
+    const late    = rows.filter(r=>r.status==='Late').length;
+    const absent  = rows.filter(r=>r.status==='Absent').length;
+    sumEl.innerHTML = `
+      ${miniSum('Present',present,'#10b981','check_circle')}
+      ${miniSum('Late',   late,   '#f59e0b','schedule')}
+      ${miniSum('Absent', absent, '#ef4444','cancel')}
+      ${miniSum('Total',  total,  '#3b82f6','list_alt')}`;
+  }
+
+  if (!tbody) return;
+  if (!rows.length) { tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8">No records found for selected filters</td></tr>`; return; }
+  tbody.innerHTML = rows.map((r,i) => `<tr>
+    <td><div style="display:flex;align-items:center;gap:9px">
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:10px;flex-shrink:0">${r.avatar||'??'}</div>
+      <div><p style="font-size:13px;font-weight:600;color:#1e293b;margin:0">${r.stuName||'—'}</p><p style="font-size:11px;color:#94a3b8;margin:0">${r.stuId||'—'}</p></div>
+    </div></td>
+    <td style="font-size:12px;color:#374151;white-space:nowrap">${App.formatDate(r.checkIn)}</td>
+    <td style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap">${App.formatTime(r.checkIn)}</td>
+    <td style="font-size:12px;color:#374151">${r.dept||'—'}</td>
+    <td><span style="font-size:12px;background:#f1f5f9;padding:2px 8px;border-radius:6px">${r.course||'—'}</span></td>
+    <td style="font-size:12px;color:#64748b">${r.terminal||'—'}</td>
+    <td>${App.badgeHtml(r.status)}</td>
+    <td><div style="display:flex;align-items:center;gap:4px">
+      <div style="width:${Math.round((r.conf||0.95)*50)}px;height:4px;border-radius:99px;background:${r.conf>=0.9?'#10b981':r.conf>=0.8?'#f59e0b':'#ef4444'}"></div>
+      <span style="font-size:11px;color:#64748b">${Math.round((r.conf||0.95)*100)}%</span>
+    </div></td>
+    ${canDel?`<td>
+      <button onclick="delRecord('${r.id}')" style="width:28px;height:28px;border:none;background:#fee2e2;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#ef4444">
+        <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+      </button>
+    </td>`:''}
+  </tr>`).join('');
+}
+
+function miniSum(label, val, color, icon) {
+  return `<div style="background:white;border-radius:12px;padding:12px 14px;border:1px solid #f1f5f9;display:flex;align-items:center;gap:10px">
+    <span class="material-symbols-outlined" style="color:${color};font-size:20px">${icon}</span>
+    <div><p style="font-size:18px;font-weight:800;color:#0f172a;margin:0">${val}</p><p style="font-size:11px;color:#94a3b8;margin:0">${label}</p></div>
+  </div>`;
+}
+
+function delRecord(id) {
+  App.modal('Delete Record','<p style="color:#374151;font-size:14px">Remove this attendance record permanently?</p>',()=>{
+    DB.deleteAttendance(id);
+    App.toast('Record deleted','success');
+    renderRows();
+  });
+}
+
+function exportCSV() {
+  const q = { search:f.search||undefined, date:f.date||undefined, status:f.status!=='all'?f.status:undefined, limit:5000 };
+  if (deptF) q.dept=deptF; else if(f.dept!=='all') q.dept=f.dept;
+  const { rows } = DB.getAttendance(q);
+  const header = 'Name,Student ID,Date,Time,Department,Course,Terminal,Status,Confidence';
+  const csv = [header, ...rows.map(r=>`"${r.stuName}","${r.stuId}","${App.formatDate(r.checkIn)}","${App.formatTime(r.checkIn)}","${r.dept}","${r.course}","${r.terminal}","${r.status}","${Math.round((r.conf||0.95)*100)}%"`)].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`attendance_${f.date||'all'}.csv`; a.click();
+  App.toast('Exported!','success');
+}
+
+function openManualModal() {
+  const {rows:students} = DB.getStudents({dept:deptF||undefined, bio:'Enrolled', limit:100});
+  App.modal('Mark Attendance Manually',`
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Student *</label>
+        <select id="m-stu" style="width:100%"><option value="">Select student…</option>
+          ${students.map(s=>`<option value="${s.id}">${s.name} (${s.stuId})</option>`).join('')}
+        </select></div>
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Status</label>
+        <select id="m-status" style="width:100%"><option value="Present">Present</option><option value="Late">Late</option><option value="Absent">Absent</option></select></div>
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Terminal</label>
+        <input id="m-terminal" type="text" value="Manual Entry" style="width:100%"/></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button onclick="document.getElementById('app-modal').remove()" class="btn btn-secondary" style="flex:1">Cancel</button>
+      <button onclick="submitManual()" class="btn btn-primary" style="flex:1">Mark Attendance</button>
+    </div>`);
+}
+
+function submitManual() {
+  const stuId    = document.getElementById('m-stu').value;
+  const status   = document.getElementById('m-status').value;
+  const terminal = document.getElementById('m-terminal').value;
+  if (!stuId) { App.toast('Select a student','warning'); return; }
+  DB.addAttendance({stuId, status, terminal, course:''});
+  document.getElementById('app-modal').remove();
+  App.toast('Attendance marked!','success');
+  renderRows();
+}
+
+render();
+</script>
+</body>
+</html>

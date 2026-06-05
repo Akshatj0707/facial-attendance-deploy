@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="My Profile"/><meta name="page-sub" content="Update your personal information"/>
+<title>Profile</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="db.js"></script><script src="api.js"></script>
+<script src="layout.js"></script>
+</head>
+<body>
+<script>
+const user = App.init();
+const rc   = App.ROLE_CONFIG[user?.role]||App.ROLE_CONFIG.student;
+
+function render() {
+  document.getElementById('page-content').innerHTML = `
+  <div style="max-width:800px">
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start" class="prof-grid">
+
+      <!-- Avatar card -->
+      <div>
+        <div class="card" style="padding:24px;text-align:center;margin-bottom:16px">
+          <div style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,${rc.color},${rc.color}99);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:white;margin:0 auto 14px">${user.avatar||user.name?.slice(0,2).toUpperCase()}</div>
+          <h3 style="font-size:16px;font-weight:700;color:#0f172a;margin:0">${user.name}</h3>
+          <p style="font-size:13px;color:#64748b;margin:3px 0 8px">${user.email}</p>
+          <span style="background:${rc.color}18;color:${rc.color};padding:4px 14px;border-radius:99px;font-size:12px;font-weight:700">${rc.label}</span>
+          ${user.dept?`<p style="font-size:12px;color:#94a3b8;margin:10px 0 0">${user.dept}</p>`:''}
+        </div>
+        <div class="card" style="padding:18px">
+          <h4 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 12px">Account Info</h4>
+          ${infoRow('Role', rc.label, 'badge')}
+          ${infoRow('Department', user.dept||'—', 'apartment')}
+          ${user.stuId?infoRow('Student ID', user.stuId, 'id_card'):''}
+          ${user.empId?infoRow('Employee ID', user.empId, 'id_card'):''}
+          ${infoRow('Member since', new Date(user.createdAt||Date.now()).toLocaleDateString('en-GB',{month:'short',year:'numeric'}), 'calendar_month')}
+        </div>
+      </div>
+
+      <!-- Edit form -->
+      <div class="card" style="padding:24px">
+        <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0 0 20px">Edit Profile</h3>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="grid-column:1/-1">
+              <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Full Name</label>
+              <input id="p-name" type="text" value="${user.name}" style="width:100%"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Email</label>
+              <input type="email" value="${user.email}" disabled style="width:100%;opacity:.6;cursor:not-allowed"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Phone</label>
+              <input id="p-phone" type="tel" value="${user.phone||''}" placeholder="+91 98765 43210" style="width:100%"/>
+            </div>
+            <div style="grid-column:1/-1">
+              <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Address</label>
+              <textarea id="p-address" rows="2" placeholder="Your address…" style="width:100%;resize:none">${user.address||''}</textarea>
+            </div>
+          </div>
+          <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;justify-content:center">
+            <span class="material-symbols-outlined" style="font-size:18px">save</span>Save Changes
+          </button>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9;margin-top:24px;padding-top:20px">
+          <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0 0 16px">Change Password</h3>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Current Password</label>
+              <input id="p-cur" type="password" placeholder="••••••" style="width:100%"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">New Password</label>
+              <input id="p-new" type="password" placeholder="••••••" style="width:100%"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Confirm Password</label>
+              <input id="p-con" type="password" placeholder="••••••" style="width:100%"/>
+            </div>
+            <button onclick="changePassword()" class="btn btn-secondary" style="justify-content:center">
+              <span class="material-symbols-outlined" style="font-size:18px">lock_reset</span>Update Password
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <style>@media(max-width:640px){.prof-grid{grid-template-columns:1fr!important}}</style>`;
+}
+
+function infoRow(label, val, icon) {
+  return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f8fafc">
+    <span class="material-symbols-outlined" style="font-size:16px;color:#94a3b8">${icon}</span>
+    <span style="font-size:12px;color:#64748b;min-width:90px">${label}</span>
+    <span style="font-size:12px;font-weight:600;color:#374151">${val}</span>
+  </div>`;
+}
+
+function saveProfile() {
+  const name = document.getElementById('p-name').value.trim();
+  const phone= document.getElementById('p-phone').value.trim();
+  const addr = document.getElementById('p-address').value.trim();
+  if (!name) { App.toast('Name cannot be empty','warning'); return; }
+  // Update in store
+  const users = JSON.parse(localStorage.getItem('fas_users')||'[]');
+  const idx = users.findIndex(u=>u.id===user.id);
+  if (idx!==-1) { users[idx].name=name; users[idx].phone=phone; users[idx].address=addr; localStorage.setItem('fas_users',JSON.stringify(users)); }
+  // Update session
+  const sess = Api.getUser(); if(sess){sess.name=name;sess.phone=phone;sess.address=addr;localStorage.setItem('fas_session',JSON.stringify(sess));}
+  App.toast('Profile updated!','success');
+}
+
+function changePassword() {
+  const cur=document.getElementById('p-cur').value;
+  const nw =document.getElementById('p-new').value;
+  const con=document.getElementById('p-con').value;
+  if (!cur||!nw) { App.toast('Fill all password fields','warning'); return; }
+  if (nw!==con) { App.toast('Passwords do not match','error'); return; }
+  if (nw.length<6) { App.toast('Password must be at least 6 characters','warning'); return; }
+  // Verify current
+  const users = JSON.parse(localStorage.getItem('fas_users')||'[]');
+  const idx = users.findIndex(u=>u.id===user.id);
+  if (idx===-1||users[idx].pwd!==btoa(cur)) { App.toast('Current password incorrect','error'); return; }
+  users[idx].pwd = btoa(nw);
+  localStorage.setItem('fas_users',JSON.stringify(users));
+  document.getElementById('p-cur').value='';
+  document.getElementById('p-new').value='';
+  document.getElementById('p-con').value='';
+  App.toast('Password changed successfully!','success');
+}
+
+render();
+</script></body></html>

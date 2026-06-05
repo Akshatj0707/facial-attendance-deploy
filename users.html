@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="User Management"/><meta name="page-sub" content="Manage all system users"/>
+<title>Users</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="db.js"></script><script src="api.js"></script>
+<script src="layout.js"></script>
+</head>
+<body>
+<script>
+const user = App.init(['admin']);
+
+function render() {
+  const users = DB.getUsers();
+  const byRole = r => users.filter(u=>u.role===r).length;
+  document.getElementById('page-content').innerHTML = `
+  <div style="max-width:1200px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px">
+      ${rc('Total Users', users.length,'#3b82f6','group')}
+      ${rc('Admins',      byRole('admin'),   '#3b82f6','admin_panel_settings')}
+      ${rc('HoDs',        byRole('hod'),     '#10b981','manage_accounts')}
+      ${rc('Faculty',     byRole('faculty'), '#8b5cf6','person_book')}
+      ${rc('Students',    byRole('student'), '#f59e0b','school')}
+    </div>
+    <div class="card" style="overflow:hidden">
+      <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
+        <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">All System Users</h3>
+        <span style="font-size:12px;color:#94a3b8">${users.length} total</span>
+      </div>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>User</th><th>Role</th><th>Department</th><th>ID</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${users.map(u=>{
+          const rcc=App.ROLE_CONFIG[u.role]||App.ROLE_CONFIG.student;
+          return `<tr>
+            <td><div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:50%;background:${rcc.color};display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:11px;flex-shrink:0">${u.avatar||u.name?.slice(0,2).toUpperCase()}</div>
+              <div><p style="font-size:13px;font-weight:600;color:#1e293b;margin:0">${u.name}</p><p style="font-size:11px;color:#94a3b8;margin:0">${u.email}</p></div>
+            </div></td>
+            <td><span style="background:${rcc.color}18;color:${rcc.color};padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase">${rcc.label}</span></td>
+            <td style="font-size:12px;color:#374151">${u.dept||'—'}</td>
+            <td style="font-size:12px;font-family:monospace;color:#64748b">${u.stuId||u.empId||'—'}</td>
+            <td><span style="background:${u.active?'#dcfce7':'#fee2e2'};color:${u.active?'#166534':'#991b1b'};padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600">${u.active?'Active':'Disabled'}</span></td>
+            <td><div style="display:flex;gap:6px">
+              ${u.id!==user.id?`<button onclick="toggleUser('${u.id}','${u.active}')" style="padding:5px 10px;border:none;background:${u.active?'#fef3c7':'#dcfce7'};color:${u.active?'#92400e':'#166534'};border-radius:8px;cursor:pointer;font-size:11px;font-weight:600">${u.active?'Disable':'Enable'}</button>
+              <button onclick="deleteUser('${u.id}','${u.name}')" style="padding:5px;border:none;background:#fee2e2;color:#ef4444;border-radius:8px;cursor:pointer"><span class="material-symbols-outlined" style="font-size:15px">delete</span></button>`:
+              '<span style="font-size:11px;color:#94a3b8">You</span>'}
+            </div></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>
+  </div>`;
+}
+
+function rc(label,val,color,icon){return `<div style="background:white;border-radius:12px;padding:14px;border:1px solid #f1f5f9;display:flex;align-items:center;gap:10px"><span class="material-symbols-outlined" style="color:${color};font-size:22px">${icon}</span><div><p style="font-size:20px;font-weight:800;color:#0f172a;margin:0">${val}</p><p style="font-size:11px;color:#94a3b8;margin:0">${label}</p></div></div>`;}
+
+function toggleUser(id, active) {
+  const users = JSON.parse(localStorage.getItem('fas_users')||'[]');
+  const u = users.find(u=>u.id===id); if(!u) return;
+  u.active = !JSON.parse(active);
+  localStorage.setItem('fas_users', JSON.stringify(users));
+  App.toast(`User ${u.active?'enabled':'disabled'}`, u.active?'success':'info');
+  render();
+}
+
+function deleteUser(id, name) {
+  App.modal('Delete User',`<p style="color:#374151;font-size:14px">Permanently delete <strong>${name}</strong>?</p>`,()=>{
+    const users=JSON.parse(localStorage.getItem('fas_users')||'[]').filter(u=>u.id!==id);
+    localStorage.setItem('fas_users',JSON.stringify(users));
+    App.toast(`${name} deleted`,'success'); render();
+  });
+}
+
+render();
+</script></body></html>

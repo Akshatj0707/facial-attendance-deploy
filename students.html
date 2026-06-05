@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="Students"/>
+<meta name="page-sub" content="Manage student directory"/>
+<title>Students — Attendance System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="db.js"></script>
+<script src="api.js"></script>
+<script src="layout.js"></script>
+</head>
+<body>
+<script>
+const user  = App.init(['admin','hod','faculty']);
+const deptF = user?.role==='admin' ? null : user?.dept;
+const canEdit = user?.role==='admin' || user?.role==='hod';
+let filters = { search:'', dept:'all', bio:'all' };
+let viewMode = 'table'; // 'table' | 'grid'
+
+function render() {
+  document.getElementById('page-content').innerHTML = `
+  <div style="max-width:1400px">
+    <!-- Header toolbar -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px;position:relative">
+        <span class="material-symbols-outlined" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:20px">search</span>
+        <input id="search-inp" type="text" placeholder="Search students…" value="${filters.search}"
+          oninput="filters.search=this.value;renderTable()"
+          style="padding-left:40px;background:white;border:1.5px solid #e2e8f0;border-radius:12px;padding-top:10px;padding-bottom:10px;font-size:13px;color:#1e293b;width:100%"/>
+      </div>
+      <select id="dept-sel" onchange="filters.dept=this.value;renderTable()" style="width:180px;background:white;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 14px;font-size:13px">
+        <option value="all">All Departments</option>
+        <option>Computer Science</option>
+        <option>Electrical Engineering</option>
+        <option>Mechanical Engineering</option>
+        <option>Civil Engineering</option>
+      </select>
+      <select id="bio-sel" onchange="filters.bio=this.value;renderTable()" style="width:160px;background:white;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 14px;font-size:13px">
+        <option value="all">All Status</option>
+        <option value="Enrolled">Enrolled</option>
+        <option value="Pending">Pending</option>
+        <option value="Failed">Failed</option>
+      </select>
+      <!-- View toggle -->
+      <div style="display:flex;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden">
+        <button onclick="setView('table')" id="view-table" style="padding:8px 14px;border:none;cursor:pointer;font-size:13px;background:${viewMode==='table'?'#f0f9ff':'white'};color:${viewMode==='table'?'#3b82f6':'#64748b'}">
+          <span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle">table_rows</span>
+        </button>
+        <button onclick="setView('grid')" id="view-grid" style="padding:8px 14px;border:none;cursor:pointer;font-size:13px;background:${viewMode==='grid'?'#f0f9ff':'white'};color:${viewMode==='grid'?'#3b82f6':'#64748b'}">
+          <span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle">grid_view</span>
+        </button>
+      </div>
+      ${canEdit ? `
+      <button onclick="openAddModal()" class="btn btn-primary">
+        <span class="material-symbols-outlined" style="font-size:18px">person_add</span>Add Student
+      </button>
+      <a href="enroll.html" class="btn btn-secondary">
+        <span class="material-symbols-outlined" style="font-size:18px">face_retouching_natural</span>Enroll Face
+      </a>` : ''}
+    </div>
+
+    <!-- Stats row -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+      ${miniStat('Total', DB.getStudents({dept:deptF||undefined}).total, '#3b82f6', 'group')}
+      ${miniStat('Enrolled', DB.getStudents({dept:deptF||undefined,bio:'Enrolled'}).total, '#10b981', 'face_retouching_natural')}
+      ${miniStat('Pending', DB.getStudents({dept:deptF||undefined,bio:'Pending'}).total, '#f59e0b', 'pending')}
+      ${miniStat('Failed', DB.getStudents({dept:deptF||undefined,bio:'Failed'}).total, '#ef4444', 'cancel')}
+    </div>
+
+    <!-- Table/Grid -->
+    <div class="card" style="overflow:hidden" id="data-container"></div>
+  </div>`;
+
+  renderTable();
+}
+
+function miniStat(label, val, color, icon) {
+  return `<div style="background:white;border-radius:14px;padding:14px 16px;border:1px solid #f1f5f9;display:flex;align-items:center;gap:12px">
+    <div style="width:36px;height:36px;border-radius:10px;background:${color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <span class="material-symbols-outlined" style="color:${color};font-size:18px">${icon}</span>
+    </div>
+    <div><p style="font-size:20px;font-weight:800;color:#0f172a;margin:0">${val}</p><p style="font-size:11px;color:#94a3b8;margin:0">${label}</p></div>
+  </div>`;
+}
+
+function renderTable() {
+  const q = { search:filters.search, bio: filters.bio!=='all'?filters.bio:undefined };
+  if (deptF) q.dept = deptF; else if (filters.dept!=='all') q.dept = filters.dept;
+  const { rows, total } = DB.getStudents(q);
+  const container = document.getElementById('data-container');
+  if (!container) return;
+
+  if (!rows.length) {
+    container.innerHTML = `<div style="text-align:center;padding:60px 20px">
+      <span class="material-symbols-outlined" style="font-size:48px;color:#cbd5e1">group_off</span>
+      <p style="font-size:14px;color:#64748b;margin:12px 0 0">No students found</p>
+    </div>`;
+    return;
+  }
+
+  if (viewMode === 'grid') {
+    container.innerHTML = `
+      <div style="padding:16px">
+        <p style="font-size:12px;color:#94a3b8;margin:0 0 14px">${total} students</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px">
+          ${rows.map(s => studentCard(s)).join('')}
+        </div>
+      </div>`;
+  } else {
+    container.innerHTML = `
+      <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
+        <p style="font-size:12px;color:#94a3b8;margin:0">${total} students found</p>
+      </div>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Student</th><th>ID</th><th>Department</th><th>Course</th><th>Year</th><th>Biometric</th><th>Attendance</th>
+          ${canEdit?'<th>Actions</th>':''}
+        </tr></thead>
+        <tbody>${rows.map(s => studentRow(s)).join('')}</tbody>
+      </table></div>`;
+  }
+}
+
+function studentCard(s) {
+  const att  = DB.getAttendance({stuRef:s.id, limit:999}).total;
+  const bio  = s.bio||'Pending';
+  const bc   = {Enrolled:'#10b981',Pending:'#f59e0b',Failed:'#ef4444'}[bio]||'#64748b';
+  return `<div style="background:white;border-radius:16px;border:1.5px solid #f1f5f9;padding:18px;transition:all .2s;cursor:pointer"
+    onmouseover="this.style.borderColor='#bfdbfe';this.style.boxShadow='0 4px 20px rgba(59,130,246,.1)'"
+    onmouseout="this.style.borderColor='#f1f5f9';this.style.boxShadow='none'"
+    onclick="viewStudent('${s.id}')">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:15px;flex-shrink:0">${s.avatar||'??'}</div>
+      <div style="overflow:hidden;flex:1">
+        <p style="font-size:13px;font-weight:700;color:#0f172a;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</p>
+        <p style="font-size:11px;color:#94a3b8;margin:2px 0 0">${s.stuId}</p>
+      </div>
+    </div>
+    <p style="font-size:11px;color:#64748b;margin:0 0 4px;font-weight:500">${s.dept}</p>
+    <p style="font-size:11px;color:#94a3b8;margin:0 0 12px">${s.course||'—'} · Year ${s.year}</p>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="background:${bc}18;color:${bc};padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600">${bio}</span>
+      <span style="font-size:11px;color:#64748b">${att} records</span>
+    </div>
+    ${canEdit ? `<div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9">
+      <button onclick="event.stopPropagation();toggleBio('${s.id}','${bio}')" style="flex:1;padding:6px;border:1.5px solid #e2e8f0;border-radius:8px;background:white;font-size:11px;font-weight:600;cursor:pointer;color:#374151">Toggle Bio</button>
+      <button onclick="event.stopPropagation();deleteStudent('${s.id}','${s.name}')" style="width:32px;height:32px;border:none;border-radius:8px;background:#fee2e2;color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+      </button>
+    </div>` : ''}
+  </div>`;
+}
+
+function studentRow(s) {
+  const att = DB.getAttendance({stuRef:s.id, limit:999}).total;
+  return `<tr>
+    <td><div style="display:flex;align-items:center;gap:10px">
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:11px;flex-shrink:0">${s.avatar||'??'}</div>
+      <div><p style="font-size:13px;font-weight:600;color:#1e293b;margin:0">${s.name}</p><p style="font-size:11px;color:#94a3b8;margin:0">${s.email||'—'}</p></div>
+    </div></td>
+    <td><span style="font-family:monospace;font-size:12px;background:#f8fafc;padding:3px 8px;border-radius:6px">${s.stuId}</span></td>
+    <td style="font-size:12px">${s.dept}</td>
+    <td style="font-size:12px">${s.course||'—'}</td>
+    <td style="font-size:12px">Year ${s.year}</td>
+    <td>${App.badgeHtml(s.bio||'Pending')}</td>
+    <td><span style="font-size:12px;font-weight:600;color:#374151">${att}</span> <span style="font-size:11px;color:#94a3b8">records</span></td>
+    ${canEdit ? `<td>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="viewStudent('${s.id}')" title="View" style="padding:5px;border:none;background:#f0f9ff;border-radius:8px;cursor:pointer;color:#3b82f6"><span class="material-symbols-outlined" style="font-size:16px">visibility</span></button>
+        <button onclick="toggleBio('${s.id}','${s.bio}')" title="Toggle Bio" style="padding:5px;border:none;background:#f0fdf4;border-radius:8px;cursor:pointer;color:#10b981"><span class="material-symbols-outlined" style="font-size:16px">face_retouching_natural</span></button>
+        <button onclick="deleteStudent('${s.id}','${s.name}')" title="Delete" style="padding:5px;border:none;background:#fee2e2;border-radius:8px;cursor:pointer;color:#ef4444"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+      </div>
+    </td>` : '<td></td>'}
+  </tr>`;
+}
+
+function setView(mode) {
+  viewMode = mode;
+  render();
+}
+
+function viewStudent(id) {
+  const s = DB.getStudents({}).rows.find(x=>x.id===id);
+  if (!s) return;
+  const att = DB.getAttendance({stuRef:id, limit:30});
+  const pct = att.total ? Math.round(att.rows.filter(r=>r.status==='Present').length/att.total*100) : 0;
+  App.modal(`Student Profile — ${s.name}`, `
+    <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+      <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:800;color:white;font-size:22px;flex-shrink:0">${s.avatar}</div>
+      <div style="flex:1">
+        <h3 style="font-size:16px;font-weight:700;color:#0f172a;margin:0">${s.name}</h3>
+        <p style="font-size:12px;color:#64748b;margin:2px 0">${s.email}</p>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+          ${App.badgeHtml(s.bio||'Pending')}
+          <span class="badge badge-blue">${s.dept}</span>
+          <span class="badge" style="background:#f3e8ff;color:#6b21a8">${s.course} · Y${s.year}</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:16px 0">
+      <div style="text-align:center;background:#f8fafc;border-radius:12px;padding:12px">
+        <p style="font-size:20px;font-weight:800;color:#0f172a;margin:0">${att.total}</p>
+        <p style="font-size:11px;color:#64748b;margin:0">Total Records</p>
+      </div>
+      <div style="text-align:center;background:#f0fdf4;border-radius:12px;padding:12px">
+        <p style="font-size:20px;font-weight:800;color:#166534;margin:0">${pct}%</p>
+        <p style="font-size:11px;color:#64748b;margin:0">Attendance</p>
+      </div>
+      <div style="text-align:center;background:#fef3c7;border-radius:12px;padding:12px">
+        <p style="font-size:20px;font-weight:800;color:#92400e;margin:0">${att.rows.filter(r=>r.status==='Late').length}</p>
+        <p style="font-size:11px;color:#64748b;margin:0">Late</p>
+      </div>
+    </div>
+    <div style="margin-top:8px">
+      <p style="font-size:12px;font-weight:700;color:#64748b;margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em">Recent Attendance</p>
+      ${att.rows.slice(0,5).map(r=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9">
+          <div>
+            <p style="font-size:12px;font-weight:600;color:#374151;margin:0">${App.formatDate(r.checkIn)}</p>
+            <p style="font-size:11px;color:#94a3b8;margin:0">${App.formatTime(r.checkIn)} · ${r.terminal}</p>
+          </div>
+          ${App.badgeHtml(r.status)}
+        </div>`).join('') || '<p style="font-size:12px;color:#94a3b8;padding:8px 0">No attendance records</p>'}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <a href="enroll.html?id=${s.id}" class="btn btn-primary" style="flex:1;justify-content:center">
+        <span class="material-symbols-outlined" style="font-size:16px">face_retouching_natural</span>Enroll Face
+      </a>
+      <a href="attendance.html" class="btn btn-secondary" style="flex:1;justify-content:center">
+        <span class="material-symbols-outlined" style="font-size:16px">list_alt</span>Full History
+      </a>
+    </div>`);
+}
+
+function toggleBio(id, current) {
+  const next = current==='Enrolled'?'Pending':'Enrolled';
+  DB.updateStudent(id, {bio:next});
+  App.toast(`Biometric status → ${next}`, 'success');
+  renderTable();
+}
+
+function deleteStudent(id, name) {
+  App.modal(`Delete Student`, `<p style="color:#374151;font-size:14px">Are you sure you want to remove <strong>${name}</strong> from the system? This cannot be undone.</p>`, () => {
+    DB.deleteStudent(id);
+    App.toast(`${name} removed`, 'success');
+    render();
+  });
+}
+
+function openAddModal() {
+  App.modal('Add New Student', `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="grid-column:1/-1"><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Full Name *</label>
+        <input id="ns-name" type="text" placeholder="e.g. Rahul Singh"/></div>
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Student ID *</label>
+        <input id="ns-sid" type="text" placeholder="e.g. CS2410"/></div>
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Year</label>
+        <select id="ns-year"><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option><option value="4">Year 4</option></select></div>
+      <div style="grid-column:1/-1"><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Email *</label>
+        <input id="ns-email" type="email" placeholder="student@college.edu"/></div>
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Department *</label>
+        <select id="ns-dept">
+          <option value="">Select dept…</option>
+          <option>Computer Science</option>
+          <option>Electrical Engineering</option>
+          <option>Mechanical Engineering</option>
+          <option>Civil Engineering</option>
+        </select></div>
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Course</label>
+        <input id="ns-course" type="text" placeholder="e.g. CS-101"/></div>
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Phone</label>
+        <input id="ns-phone" type="tel" placeholder="+91 98765 43210"/></div>
+      <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Bio Status</label>
+        <select id="ns-bio"><option value="Pending">Pending</option><option value="Enrolled">Enrolled</option></select></div>
+    </div>
+    <div id="add-err" style="display:none;margin-top:10px;padding:8px 12px;background:#fee2e2;border-radius:8px;font-size:12px;color:#991b1b"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button onclick="document.getElementById('app-modal').remove()" class="btn btn-secondary" style="flex:1">Cancel</button>
+      <button onclick="submitNewStudent()" class="btn btn-primary" style="flex:1">Add Student</button>
+    </div>`);
+}
+
+function submitNewStudent() {
+  const errEl = document.getElementById('add-err');
+  const data = {
+    stuId: document.getElementById('ns-sid').value.trim(),
+    name:  document.getElementById('ns-name').value.trim(),
+    email: document.getElementById('ns-email').value.trim(),
+    dept:  document.getElementById('ns-dept').value,
+    course:document.getElementById('ns-course').value.trim(),
+    year:  +document.getElementById('ns-year').value,
+    phone: document.getElementById('ns-phone').value.trim(),
+    bio:   document.getElementById('ns-bio').value,
+  };
+  if (!data.stuId||!data.name||!data.email||!data.dept) {
+    errEl.textContent='Fill all required fields'; errEl.style.display='block'; return;
+  }
+  try {
+    DB.addStudent(data);
+    document.getElementById('app-modal').remove();
+    App.toast(`${data.name} added successfully!`, 'success');
+    render();
+  } catch(e) { errEl.textContent=e.message; errEl.style.display='block'; }
+}
+
+render();
+</script>
+</body>
+</html>

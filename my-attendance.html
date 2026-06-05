@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="page-title" content="My Attendance"/><meta name="page-sub" content="Your complete attendance history"/>
+<title>My Attendance</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="db.js"></script><script src="api.js"></script>
+<script src="layout.js"></script>
+</head>
+<body>
+<script>
+const user = App.init(['student']);
+function render() {
+  const students = DB.getStudents({}).rows;
+  const stuRecord = students.find(s=>s.userId===user.id||s.email===user.email||s.stuId===user.stuId);
+  const {rows,total} = stuRecord ? DB.getAttendance({stuRef:stuRecord.id,limit:500}) : {rows:[],total:0};
+  const present=rows.filter(r=>r.status==='Present').length;
+  const late=rows.filter(r=>r.status==='Late').length;
+  const rate=total?Math.round((present+late)/total*100):0;
+  document.getElementById('page-content').innerHTML=`
+  <div style="max-width:900px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px">
+      ${sc(rate+'%','Attendance Rate',rate>=85?'#10b981':rate>=75?'#f59e0b':'#ef4444','trending_up')}
+      ${sc(present,'Days Present','#10b981','check_circle')}
+      ${sc(late,'Late Arrivals','#f59e0b','schedule')}
+      ${sc(total-present-late,'Absent','#ef4444','cancel')}
+      ${sc(total,'Total Records','#3b82f6','list_alt')}
+    </div>
+    <div class="card" style="overflow:hidden">
+      <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
+        <h3 style="font-size:14px;font-weight:700;color:#0f172a;margin:0">Complete History</h3>
+        <button onclick="exportMine()" class="btn btn-secondary" style="font-size:12px">
+          <span class="material-symbols-outlined" style="font-size:15px">download</span>Export
+        </button>
+      </div>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Date</th><th>Day</th><th>Check-in Time</th><th>Course</th><th>Terminal</th><th>Status</th><th>Confidence</th></tr></thead>
+        <tbody>${rows.map(r=>`<tr>
+          <td style="font-size:13px;font-weight:600">${App.formatDate(r.checkIn)}</td>
+          <td style="font-size:12px;color:#64748b">${new Date(r.checkIn).toLocaleDateString('en-US',{weekday:'short'})}</td>
+          <td style="font-size:13px;font-weight:700;color:#374151">${App.formatTime(r.checkIn)}</td>
+          <td><span style="background:#f1f5f9;padding:2px 8px;border-radius:6px;font-size:12px">${r.course||'—'}</span></td>
+          <td style="font-size:12px;color:#64748b">${r.terminal||'—'}</td>
+          <td>${App.badgeHtml(r.status)}</td>
+          <td><span style="font-size:12px;font-weight:600;color:${(r.conf||0.95)>=0.9?'#10b981':'#f59e0b'}">${Math.round((r.conf||0.95)*100)}%</span></td>
+        </tr>`).join('')||'<tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8">No attendance records found</td></tr>'}
+        </tbody>
+      </table></div>
+    </div>
+  </div>`;
+}
+function sc(val,label,color,icon){return `<div style="background:white;border-radius:12px;padding:14px;border:1px solid #f1f5f9;display:flex;align-items:center;gap:10px"><span class="material-symbols-outlined" style="color:${color};font-size:22px">${icon}</span><div><p style="font-size:20px;font-weight:800;color:#0f172a;margin:0">${val}</p><p style="font-size:11px;color:#94a3b8;margin:0">${label}</p></div></div>`;}
+function exportMine(){
+  const students=DB.getStudents({}).rows;
+  const stuRecord=students.find(s=>s.userId===user.id||s.email===user.email||s.stuId===user.stuId);
+  const {rows}=stuRecord?DB.getAttendance({stuRef:stuRecord.id,limit:500}):{rows:[]};
+  const csv=['Date,Time,Course,Terminal,Status'].concat(rows.map(r=>`"${App.formatDate(r.checkIn)}","${App.formatTime(r.checkIn)}","${r.course}","${r.terminal}","${r.status}"`)).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='my_attendance.csv';a.click();
+  App.toast('Exported!','success');
+}
+render();
+</script></body></html>
